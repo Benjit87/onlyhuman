@@ -1,0 +1,53 @@
+{
+  "name": "onlyhuman-vscode",
+  "displayName": "onlyhuman",
+  "version": "0.1.0",
+  "publisher": "local",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "main": "./extension.js",
+  "activationEvents": [
+    "onLanguage:human",
+    "onLanguage:onlyhuman-robot"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "human",
+        "extensions": [
+          ".human"
+        ],
+        "aliases": [
+          "human"
+        ],
+        "configuration": "./language-configuration.json"
+      },
+      {
+        "id": "onlyhuman-robot",
+        "extensions": [
+          ".bot"
+        ],
+        "aliases": [
+          "onlyhuman robot"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "human",
+        "scopeName": "source.human",
+        "path": "./syntaxes/human.tmLanguage.json"
+      },
+      {
+        "language": "onlyhuman-robot",
+        "scopeName": "source.human.robot",
+        "path": "./syntaxes/robot.tmLanguage.json"
+      }
+    ]
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  }
+}
