@@ -1,12 +1,27 @@
 {
   "name": "onlyhuman-vscode",
   "displayName": "onlyhuman",
+  "description": "Highlighting, linting and go-to-definition for onlyhuman *.human and *.bot spec files",
   "version": "0.1.0",
-  "publisher": "local",
+  "publisher": "benjit87",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Benjit87/onlyhuman.git"
+  },
   "engines": {
     "vscode": "^1.85.0"
   },
-  "main": "./extension.js",
+  "categories": [
+    "Programming Languages",
+    "Linters"
+  ],
+  "keywords": [
+    "onlyhuman",
+    "spec",
+    "human",
+    "bot"
+  ],
+  "main": "./dist/extension.js",
   "activationEvents": [
     "onLanguage:human",
     "onLanguage:onlyhuman-robot"
@@ -47,7 +62,13 @@
       }
     ]
   },
-  "dependencies": {
+  "scripts": {
+    "build": "node build.mjs",
+    "package": "vsce package --skip-license"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0",
+    "@vscode/vsce": "^3.0.0",
     "vscode-languageclient": "^9.0.1"
   }
 }

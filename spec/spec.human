@@ -4,6 +4,13 @@
 - [path][line] numbers are targets and get updated after coding.
 - $Linter, $GoToDefinition and $Highlighter work on *.bot as well as *.human
 
+#vscode deployment
+- package as a .vsix, installed with code --install-extension
+- bundle the server and client with esbuild into vscode/dist
+- the server runs on the node that comes with vscode
+- publisher is benjit87
+- published to the marketplace
+
 @Data
 - *.human file
 - *.bot file // same syntax as human

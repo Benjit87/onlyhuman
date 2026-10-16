@@ -1,17 +1,16 @@
-// thin client: starts ../src/lsp/server.ts over stdio for *.human and *.bot
-const path = require('path')
+// thin client: starts the bundled server (dist/server.js) on vscode's own node, for *.human and *.bot
 const { LanguageClient, TransportKind } = require('vscode-languageclient/node')
 
 let client
 
-exports.activate = () => {
-  const module = path.join(__dirname, '..', 'src', 'lsp', 'server.ts')
+exports.activate = (context) => {
+  const module = context.asAbsolutePath('dist/server.js')
   client = new LanguageClient(
     'onlyhuman',
     'onlyhuman',
     {
-      run: { command: 'node', args: [module, '--stdio'], transport: TransportKind.stdio },
-      debug: { command: 'node', args: [module, '--stdio'], transport: TransportKind.stdio },
+      run: { module, transport: TransportKind.ipc },
+      debug: { module, transport: TransportKind.ipc },
     },
     { documentSelector: [{ language: 'human' }, { language: 'onlyhuman-robot' }] },
   )
