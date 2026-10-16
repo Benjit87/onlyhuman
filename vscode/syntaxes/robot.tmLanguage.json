@@ -1,0 +1,5 @@
+{
+  "name": "onlyhuman-robot",
+  "scopeName": "source.human.robot",
+  "patterns": [{ "include": "source.human" }]
+}

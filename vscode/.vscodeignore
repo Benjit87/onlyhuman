@@ -1,0 +1,6 @@
+.vscode/**
+node_modules/**
+extension.js
+build.mjs
+package-lock.json
+**/*.map

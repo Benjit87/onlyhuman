@@ -1,0 +1,87 @@
+#implementation
+- implement a token parser for human.skills
+- implementation is in typescript
+- [path][line] numbers are targets and get updated after coding.
+- $Linter, $GoToDefinition and $Highlighter work on *.bot as well as *.human
+
+#vscode deployment
+- package as a .vsix, installed with code --install-extension
+- bundle the server and client with esbuild into vscode/dist
+- the server runs on the node that comes with vscode
+- publisher is benjit87
+- published to the marketplace
+
+@Data
+- *.human file
+- *.bot file // same syntax as human
+
+@Structure
+- - // a leading - marks a child of the previous header, bullet and indent, unlimited depth
+- indent is 2 space only, error if its not
+
+@Token
+- @
+- $
+- ?
+- //
+- #
+- ->
+- +
+- word // can represent methods or a defined behavior or just a sentence, semantically driven
+- comment_sentence // the words after // , this represent instructions or remarks
+- ==
+- -
+- word // a // inside quotes e.g "//" is a word, not a comment
+
+@Node
+- @Token // the token of this line
+- children // @Node list, defined by - bullets and indent
+
+@Tokens
+- @Token // list
+
+?Data
+- @Data
+
+?Parsed
+- AST of @Node // tree of nodes, one per line
+
+$Parser
+- @Data -> tokenize -> @Tokens
+- @Tokens + @Structure -> parser -> ?Parsed
+
+$GoToDefinition
+- define for me
+- single .human file plus its sibling *.bot only
+- on a definition header of @,$,? go to the same header in the *.bot
+- if no *.bot or header, stay on the definition
+
+$Highlighter
+- @Token -> colour -> editor
+- @
+- $
+- ?
+- #
+- "//"
+- ->
+- +
+- ==
+- -
+- each get a colour
+
+$Linter
+- define for me
+- unused-definition is a warning
+- missing-robot only checked when file info is passed
+- [path][line] target must exist, warning if the file or line is missing
+- [path] is relative to the folder that holds .git or SKILLS.md
+- missing-human, same as missing-robot, for *.bot
+
+$LSP
+- $GoToDefinition
+- $Linter
+
+$CLI
+- cli def supports both name form and position form
+- $GoToDefinition
+- $Linter

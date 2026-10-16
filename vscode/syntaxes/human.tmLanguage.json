@@ -1,0 +1,50 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "human",
+  "scopeName": "source.human",
+  "patterns": [
+    { "include": "#comment" },
+    { "include": "#requirement" },
+    { "include": "#entity" },
+    { "include": "#state" },
+    { "include": "#service" },
+    { "include": "#bare-prefix" },
+    { "include": "#operator" },
+    { "include": "#bullet" }
+  ],
+  "repository": {
+    "comment": {
+      "name": "comment.line.double-slash.human",
+      "match": "(?:^|(?<=\\s))//.*$"
+    },
+    "requirement": {
+      "name": "markup.heading.human",
+      "begin": "^#",
+      "end": "(?=(?:^|(?<=\\s))//)|$"
+    },
+    "entity": {
+      "name": "entity.name.type.human",
+      "match": "(?<![\\w@$?#])@\\w+"
+    },
+    "state": {
+      "name": "variable.other.constant.human",
+      "match": "(?<![\\w@$?#])\\?\\w+"
+    },
+    "service": {
+      "name": "entity.name.function.human",
+      "match": "(?<![\\w@$?#])\\$\\w+"
+    },
+    "bare-prefix": {
+      "name": "punctuation.definition.prefix.human",
+      "match": "(?<![\\w@$?#])[@$?#](?![\\w])"
+    },
+    "operator": {
+      "name": "keyword.operator.human",
+      "match": "(?<=\\s)(?:->|==|\\+)(?=\\s|$)"
+    },
+    "bullet": {
+      "name": "punctuation.definition.list.begin.human",
+      "match": "(?:^|(?<=\\s))-(?=\\s|$)"
+    }
+  }
+}
