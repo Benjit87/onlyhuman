@@ -1,4 +1,5 @@
 #implementation
+- version: 0.2.0
 - implement a token parser for human.skills
 - implementation is in typescript
 - [path][line] numbers are targets and get updated after coding.
@@ -16,8 +17,11 @@
 - *.bot file // same syntax as human
 
 @Structure
-- - // a leading - marks a child of the previous header, bullet and indent, unlimited depth
-- indent is 2 space only, error if its not
+- each child line starts with exactly one bullet marker
+- nest a child by adding 2 spaces before its bullet marker for each level
+- never show nesting by repeating bullet markers on the same line
+- indent using spaces only; any other indentation is an error
+- a line with only an operator after its bullet marker lists that operator
 
 @Token
 - @
@@ -57,6 +61,7 @@ $GoToDefinition
 - if no *.bot or header, stay on the definition
 
 $Highlighter
+- each token type gets its own color
 - @Token -> colour -> editor
 - @
 - $
@@ -67,7 +72,6 @@ $Highlighter
 - +
 - ==
 - -
-- each get a colour
 
 $Linter
 - define for me

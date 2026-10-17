@@ -55,6 +55,8 @@ test('linter rules', () => {
   assert.ok(rules('@A\n - x\n').includes('bad-indent'))
   assert.ok(rules('@A\n\t- x\n').includes('bad-indent'))
   assert.ok(rules('@A\n    - x\n').includes('indent-jump'))
+  assert.ok(rules('@A\n- - x\n').includes('repeated-bullet'))
+  assert.ok(!rules('@A\n- - // dash token\n').includes('repeated-bullet'))
   assert.ok(rules('@A\n- @Nodee\n').includes('undefined-reference'))
   assert.ok(rules('@A\n@A\n').includes('duplicate-definition'))
   assert.ok(rules('@A\n- x ->\n').includes('dangling-operator'))

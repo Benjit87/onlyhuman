@@ -13,8 +13,9 @@ description: "Write and maintain onlyhuman specs, a descriptive language where t
 # requirement
 - *.human is only to be editable by human
 - grill the human if he did something ambiguous or wrong
-- - ask before generating, if the human says go ahead anyway list the assumptions at the end of the .bot
+  - ask before generating, if the human says go ahead anyway list the assumptions at the end of the .bot
 - say regenerate or regen to review the human spec to generate the robot spec again
+- say approve to implement the spec
 
 # .human definition
 - @ prefix = entity
@@ -25,7 +26,7 @@ description: "Write and maintain onlyhuman specs, a descriptive language where t
 - "->" = logic flow
 - operator == can mean equal semantically or literally, robot decide
 - "+" operator means combine the behavior into a set
-- child or attributes is defined by - , composition is allowed
+- a leading `-` marks a child of the previous item; indent by 2 spaces for each deeper level
 - indent is 2 spaces only, error if not
 - a line with no - must start with a prefix
 - a single word that does not have prefix or quotes is a behavioural functionality or attributes name
@@ -41,8 +42,8 @@ description: "Write and maintain onlyhuman specs, a descriptive language where t
 - use same formatting style as .human but more details like a specification
 - make sure all the prefix is followed over
 - for each header create a relative path to point to the correct code line e.g [./example.txt][16]
-- - path is relative to the nearest folder that holds .git or SKILL.md
-- - update the line numbers after coding
+  - path is relative to the nearest folder that holds .git or SKILL.md
+  - update the line numbers after coding
 - list assumptions at the end of the .bot when the .human left something open
 - lint the .bot before showing it, it must pass like a .human
 - ask human to review *.bot before implementation

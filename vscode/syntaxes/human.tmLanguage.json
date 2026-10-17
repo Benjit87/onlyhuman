@@ -9,8 +9,12 @@
     { "include": "#state" },
     { "include": "#service" },
     { "include": "#bare-prefix" },
-    { "include": "#operator" },
-    { "include": "#bullet" }
+    { "include": "#arrow" },
+    { "include": "#plus" },
+    { "include": "#equals" },
+    { "include": "#bullet" },
+    { "include": "#dash" },
+    { "include": "#word" }
   ],
   "repository": {
     "comment": {
@@ -38,13 +42,29 @@
       "name": "punctuation.definition.prefix.human",
       "match": "(?<![\\w@$?#])[@$?#](?![\\w])"
     },
-    "operator": {
-      "name": "keyword.operator.human",
-      "match": "(?<=\\s)(?:->|==|\\+)(?=\\s|$)"
+    "arrow": {
+      "name": "keyword.operator.arrow.human",
+      "match": "(?<=\\s)->(?=\\s|$)"
+    },
+    "plus": {
+      "name": "keyword.operator.plus.human",
+      "match": "(?<=\\s)\\+(?=\\s|$)"
+    },
+    "equals": {
+      "name": "keyword.operator.equals.human",
+      "match": "(?<=\\s)==(?=\\s|$)"
     },
     "bullet": {
-      "name": "punctuation.definition.list.begin.human",
-      "match": "(?:^|(?<=\\s))-(?=\\s|$)"
+      "match": "^([ ]*)(-)(?=\\s|$)",
+      "captures": { "2": { "name": "punctuation.definition.list.begin.human" } }
+    },
+    "dash": {
+      "name": "punctuation.definition.dash.human",
+      "match": "(?<=\\s)-(?=\\s|$)"
+    },
+    "word": {
+      "name": "string.unquoted.word.human",
+      "match": "(?<!\\S)(?!->(?=\\s|$)|==(?=\\s|$)|\\+(?=\\s|$)|-(?=\\s|$))[^\\s]+"
     }
   }
 }
