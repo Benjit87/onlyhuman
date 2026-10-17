@@ -4,12 +4,9 @@
   "description": "A descriptive language for writing specs in plain bullets, with a CLI linter and go-to-definition.",
   "license": "MIT",
   "type": "module",
-  "bin": { "onlyhuman": "./dist/cli.js" },
+  "bin": { "onlyhuman": "dist/cli.js" },
   "files": ["dist", "README.md", "LICENSE"],
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/Benjit87/onlyhuman.git"
-  },
+  "repository": { "type": "git", "url": "git+https://github.com/Benjit87/onlyhuman.git" },
   "homepage": "https://github.com/Benjit87/onlyhuman#readme",
   "bugs": { "url": "https://github.com/Benjit87/onlyhuman/issues" },
   "keywords": ["onlyhuman", "spec", "specification", "language", "linter", "cli"],

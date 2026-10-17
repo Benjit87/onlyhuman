@@ -55,6 +55,9 @@ description: "Write and maintain onlyhuman specs, a descriptive language where t
 - never delete a file without asking
 
 # tools
-- node src/cli.ts lint <file> // *.human or *.bot
-- node src/cli.ts def <name> <file>
-- node src/cli.ts def <file>:<line>:<col>
+- install with `npm i onlyhuman` in the project
+  - run with `npx onlyhuman`
+  - use `npm i -g onlyhuman` instead for a global `onlyhuman` command
+- `npx onlyhuman lint <file>` // *.human or *.bot
+- `npx onlyhuman def <name> <file>`
+- `npx onlyhuman def <file>:<line>:<col>`

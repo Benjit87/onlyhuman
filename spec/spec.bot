@@ -78,7 +78,7 @@
   - exit nonzero if any step fails
 - package setup for the CLI
   - bundle src/cli.ts with esbuild into dist/cli.js, platform node, format esm, target node20
-  - point bin.onlyhuman at ./dist/cli.js and keep the node shebang
+  - point bin.onlyhuman at dist/cli.js and keep the node shebang
   - add root esbuild as a devDependency and build:cli to scripts
   - the CLI runtime has no npm dependencies; keep the vscode-languageserver packages in devDependencies for the LSP source
   - set files to dist, README.md and LICENSE; no src, tests, vscode or node_modules in the package
