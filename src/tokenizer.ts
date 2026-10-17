@@ -2,6 +2,7 @@
 import type { Token, TokenKind, Tokens } from './types.ts'
 
 const PREFIX_RE = /^([@$?#])([A-Za-z0-9_]*)(.*)$/
+const PERCENT_RE = /^%([A-Za-z0-9_]*)(.*)$/
 
 export function tokenize(text: string): Tokens {
   const tokens: Tokens = []
@@ -39,6 +40,11 @@ export function tokenize(text: string): Tokens {
           push('prefix', m[1], pos)
           if (m[2]) push('word', m[2], pos + 1)
           if (m[3]) push('word', m[3], pos + 1 + m[2].length)
+        } else if (PERCENT_RE.test(run)) {
+          const [, name, rest] = PERCENT_RE.exec(run)!
+          push('percent', '%', pos)
+          if (name) push('word', name, pos + 1)
+          if (rest) push('word', rest, pos + 1 + name.length)
         } else {
           push('word', run, pos)
         }

@@ -1,7 +1,8 @@
 // spec.bot generated from spec.human. Do not edit by hand, change spec.human and regenerate.
-// [path][line] = where the code lives, [path] is relative to the folder that holds .git or SKILL.md
+// [path][line] = where the code lives, [path] is relative to the nearest folder that holds .git, or the parent of spec/ when no .git is found
 
 #implementation [./package.json][1]
+- version 0.2.0, kept in step with vscode/package.json
 - language is typescript, node >= 20, strict mode
 - core is pure functions, no editor or fs dependency, so $LSP and $CLI share it
 - $Linter, $GoToDefinition and $Highlighter work on *.bot as well as *.human
@@ -16,6 +17,7 @@
   - src/cli.ts // $CLI
   - vscode/ // thin client, starts the lsp for *.human and *.bot
   - vscode/dist/ // bundled output of esbuild, what the .vsix ships
+  - vscode/install-local.sh // bash script to build, package and install the extension locally
   - vscode/syntaxes/human.tmLanguage.json // $Highlighter grammar for *.human
   - vscode/syntaxes/robot.tmLanguage.json // same grammar for *.bot, language id onlyhuman-robot
   - tests/ // unit tests on the pure functions
@@ -24,7 +26,7 @@
 #vscode deployment [./vscode/package.json][1]
 - package as a .vsix, installed with code --install-extension
   - build: cd vscode, npm run build, then npx vsce package
-  - output: onlyhuman-vscode-<version>.vsix, version starts at 0.1.0 and is bumped per release
+  - output: onlyhuman-vscode-<version>.vsix, version is 0.2.0 and is bumped per release
   - install: code --install-extension onlyhuman-vscode-<version>.vsix
 - bundle the server and client with esbuild into vscode/dist
   - vscode/dist/server.js // from src/lsp/server.ts, with vscode-languageserver bundled in
@@ -42,6 +44,11 @@
   - publishing is done by the human with their own personal access token, the robot never asks for or sees the token
   - the robot prepares everything up to a verified .vsix and stops, then asks before any publish step
   - a publish is public, so confirm first that FPG policy allows it // see assumptions
+- provide a bash script to install locally
+  - vscode/install-local.sh runs from any working directory and resolves its own location
+  - requires a supported Node.js, npm and the VS Code code command
+  - installs dependencies, builds the bundles, packages the .vsix and installs it with code --install-extension
+  - exits with a nonzero status if any step fails
 - verify before handing over
   - the .vsix contents are listed with npx vsce ls and contain only dist, package.json, README and the grammars
   - the bundled server answers an lsp initialize and a definition request over ipc and stdio
@@ -54,7 +61,7 @@
   - header // no leading -, starts with a prefix
   - child // starts with - after optional indent
   - blank
-- in a *.bot a header may end with a pointer, e.g `@Token [./src/types.ts][14]`
+- in a *.bot a header may end with a pointer, e.g `@Token [./src/types.ts][15]`
   - the pointer is two words glued together, [path][line], so it needs no new token
 
 @Structure [./src/parser.ts][6]
@@ -69,8 +76,9 @@
 - only the first - on a line is the bullet, any later - is a - token
 - a line with only one operator after its child marker lists that operator; an optional // comment may follow
 - a listed dash is the child marker followed by a dash token and an optional comment
+- *.human and *.bot use the same child and indentation rules
 
-@Token [./src/types.ts][14]
+@Token [./src/types.ts][15]
 - every token has kind, text, line, col, length // 1-based line, 0-based col
 - prefixes are @ $ ? and #
   - prefix token, followed by word as its name when attached e.g @Token = @ + word(Token)
@@ -83,6 +91,9 @@
   - space separated
 - dash // -
   - bullet if first on the line, else a - token
+- percent // %, *.bot only, marks a method or additional detail in a child
+  - attached to the name, e.g %tokenize, no space
+  - the tokenizer emits it in any file, only the *.bot grammar highlights it
 - word // can represent methods or a defined behavior or just a sentence, semantically driven
   - any other run of non-space characters e.g *.human, tokenize
   - a // is a comment only when it starts a space-separated run
@@ -95,20 +106,20 @@
   - kept as one raw string, never tokenized further, never a reference
   - instructions for the robot when generating, ignored by lint and go-to-definition
 
-@Tokens [./src/types.ts][23]
+@Tokens [./src/types.ts][24]
 - @Token // list, in source order, line breaks kept via line number
 
-@Node [./src/types.ts][27]
+@Node [./src/types.ts][28]
 - @Token // the token of this line, first token after bullet
 - tokens // all @Token of the line, in order
 - depth
 - children // @Node list, defined by - bullets and indent
 - kind // header | child
 
-?Data [./src/tokenizer.ts][6]
+?Data [./src/tokenizer.ts][7]
 - @Data
 
-?Parsed [./src/types.ts][38]
+?Parsed [./src/types.ts][39]
 - AST of @Node // tree of nodes, one per line
 - roots = header nodes, children nest by @Structure
 - a child with no header above it is kept at root and flagged by $Linter
@@ -119,8 +130,12 @@ $Parser [./src/parser.ts][16]
 - @Tokens + @Structure -> parser -> ?Parsed
 - tokenize(text) returns @Tokens
 - parse(tokens) returns ?Parsed
+- method signatures
+  - %tokenize(text: string): Tokens [./src/tokenizer.ts][7]
+  - %parse(tokens: Tokens): Parsed [./src/parser.ts][16]
+  - %parseText(text: string): Parsed [./src/parser.ts][53] // tokenize + parse in one call
 
-$Linter [./src/linter.ts][13]
+$Linter [./src/linter.ts][19]
 - ?Parsed -> lint -> diagnostics
 - diagnostic = rule, severity, line, col, length, message
 - definition = a header whose first token is @ ? or $ plus a name
@@ -140,8 +155,8 @@ $Linter [./src/linter.ts][13]
   - missing-robot // warning: x.human has no sibling x.bot, only when the caller passes file info
   - missing-human // warning: x.bot has no sibling x.human, only when the caller passes file info
   - broken-pointer // warning: a *.bot header whose [path][line] points to a missing file, or a line past the end of it
-    - [path] is relative to the folder that holds .git or SKILL.md, found by walking up from the file
-    - no such folder found: the check is skipped
+    - [path] is relative to the nearest folder that holds .git, found by walking up from the spec file
+    - when no .git is found, [path] is relative to the parent of the spec/ folder
     - only checked when the caller passes file info
 - not flagged
   - a bare @ $ ? with no name e.g `- @` in @Token
@@ -151,25 +166,28 @@ $Linter [./src/linter.ts][13]
   - a line that is only one operator, e.g under @Token, it is a listing
   - quoted text like `"@Name"`, it is a word
 
-$GoToDefinition [./src/definition.ts][71]
+$GoToDefinition [./src/definition.ts][90]
 - (?Parsed, position) -> find token -> definition location
 - (?Parsed, name) -> definition location
 - name = prefix + name, e.g @Token
 - found: returns line, col, length of the defining header
-- not found, or token is not @ ? $ reference: returns none
+- not found, or token is not an @ ? $ reference or an eligible header: returns none
 - duplicates: first definition wins, $Linter reports the rest
 - cursor in a comment returns none
 - scope is one *.human file plus its sibling *.bot, no other files
 - in a *.human
   - a reference goes to its .human header
-  - cursor on a definition header of @ $ ? goes to the header with the same prefix + name in x.bot
+  - cursor on a definition header of @ $ ? or # goes to the matching header in x.bot
+  - # headers match by their full requirement text after #, excluding a trailing [path][line] pointer in x.bot
   - the robot header is found by parsing x.bot with the same $Parser, trailing [path][line] on the header is ignored
   - found: location carries the robot file, so $LSP and $CLI can open another file
   - no x.bot, or no such header in it: stays on the .human definition
-  - # and // headers have no robot target, they return none
+  - // comment headers have no robot target
 - in a *.bot
   - a reference goes to its .bot header
   - cursor on a definition header goes to the code line in its [path][line]
+  - cursor on a % child line goes to the code file and line in its trailing [path][line], same rule as a header
+  - a % in a *.human has no robot target, it only appears in *.bot
   - no pointer, or the file is missing: stays on the .bot header
 - the caller passes the parsed robot, the function does no file reading
 
@@ -186,6 +204,7 @@ $Highlighter [./vscode/syntaxes/human.tmLanguage.json][1]
   - the comment marker and comment_sentence // comment.line, from the marker to end of line, nothing inside is coloured
   - arrow, plus and equals // distinct keyword.operator scopes
   - bullet and later dash // distinct punctuation scopes
+  - percent // keyword.operator scope of its own, *.bot only
   - word // distinct word scope, theme decides its colour
   - comment_sentence // comment scope, shared with the comment marker because the entire comment is highlighted together
 - a bare prefix with no name gets the punctuation scope of its prefix
@@ -201,7 +220,7 @@ $LSP [./src/lsp/server.ts][19]
 - positions 0-based, per the lsp protocol
 - vscode client in ./vscode starts the server for files *.human, and *.bot
 
-$CLI [./src/cli.ts][17]
+$CLI [./src/cli.ts][19]
 - $GoToDefinition
 - $Linter
 - onlyhuman lint <file>
@@ -222,8 +241,9 @@ $CLI [./src/cli.ts][17]
 // 1. in a *.bot, go-to-definition on a header goes to the code line in its [path][line], not back to the .human header
 // 2. *.bot gets its own language id onlyhuman-robot that reuses the same grammar, so *.human and *.bot are configured separately
 // 3. header consistency between .human and .bot is not linted, it is not in spec.human
-// 4. [path] is found by walking up from the file to the nearest folder that holds .git or SKILL.md
-// 5. the spec says SKILLS.md, the file is SKILL.md, both are accepted
+// 4. when both bases could apply, the nearest .git folder takes precedence over the parent of spec/
+// 5. the local install script lives at vscode/install-local.sh and uses the VS Code code command available on PATH
 // 6. no license is set until the human decides, vsce warns without one
 // 7. the spec now says published to the marketplace, so the .bot treats publishing as a human step and asks first, the earlier advice was to keep it internal
 // 8. an operator listing may have a trailing // comment, but no other content; this follows the existing comment syntax and the single-operator listing rule
+// 9. # headers match by exact requirement text after the #; a trailing [path][line] in the .bot is ignored

@@ -9,6 +9,7 @@ export type TokenKind =
   | 'equals' // ==
   | 'bullet' // first - on a line
   | 'dash' // any later -
+  | 'percent' // % (*.bot only by convention)
   | 'word'
 
 export interface Token {

@@ -1,6 +1,6 @@
 // the only fs access around the pure core: sibling file, project root, pointer targets
 import { existsSync, readFileSync, statSync } from 'node:fs'
-import { dirname, join, resolve } from 'node:path'
+import { basename, dirname, join, resolve } from 'node:path'
 import { parseText } from './parser.ts'
 import type { Parsed } from './types.ts'
 
@@ -27,15 +27,14 @@ export function loadRobot(humanPath: string): Parsed | undefined {
   return path !== humanPath && existsSync(path) ? parseText(readFileSync(path, 'utf8')) : undefined
 }
 
-// the nearest folder up from the file that holds .git or SKILL.md (SKILLS.md as written in the spec is accepted too)
-const ROOT_MARKERS = ['.git', 'SKILL.md', 'SKILLS.md']
-
 export function findProjectRoot(fromPath: string): string | undefined {
   let dir = dirname(resolve(fromPath))
+  let specParent: string | undefined
   for (;;) {
-    if (ROOT_MARKERS.some((m) => existsSync(join(dir, m)))) return dir
+    if (existsSync(join(dir, '.git'))) return dir
+    if (!specParent && basename(dir) === 'spec') specParent = dirname(dir)
     const up = dirname(dir)
-    if (up === dir) return undefined
+    if (up === dir) return specParent
     dir = up
   }
 }

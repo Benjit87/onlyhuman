@@ -35,13 +35,15 @@ description: "Write and maintain onlyhuman specs, a descriptive language where t
 - a placeholder like "@Name" is quoted so it is not read as a symbol
 
 # .bot definition
+- % prefix = allowed in child to represent method or additional details
+- use % to provide relevant method defination to code for human to understand
 - create if not found
 - for agent to write the proper spec before implementation
 - implementation is based on the description of human tokens semantically
 - *.bot is a more detailed *.human for human to read so make it concise
 - use same formatting style as .human but more details like a specification
 - make sure all the prefix is followed over
-- for each header create a relative path to point to the correct code line e.g [./example.txt][16]
+- for each prefix create relevant relative path to point to the correct code line e.g [./example.txt][16]
   - path is relative to the nearest folder that holds .git or SKILL.md
   - update the line numbers after coding
 - list assumptions at the end of the .bot when the .human left something open

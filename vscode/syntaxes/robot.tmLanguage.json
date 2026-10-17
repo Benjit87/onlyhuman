@@ -1,5 +1,15 @@
 {
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
   "name": "onlyhuman-robot",
   "scopeName": "source.human.robot",
-  "patterns": [{ "include": "source.human" }]
+  "patterns": [
+    { "include": "#percent" },
+    { "include": "source.human" }
+  ],
+  "repository": {
+    "percent": {
+      "name": "keyword.operator.percent.human",
+      "match": "(?<![\\w@$?#])%(?=\\w|\\s|$)"
+    }
+  }
 }

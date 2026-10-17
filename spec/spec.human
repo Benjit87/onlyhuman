@@ -11,10 +11,11 @@
 - the server runs on the node that comes with vscode
 - publisher is benjit87
 - published to the marketplace
+- provide a bash script to install locally
 
 @Data
 - *.human file
-- *.bot file // same syntax as human
+- *.bot file
 
 @Structure
 - each child line starts with exactly one bullet marker
@@ -22,6 +23,7 @@
 - never show nesting by repeating bullet markers on the same line
 - indent using spaces only; any other indentation is an error
 - a line with only an operator after its bullet marker lists that operator
+- both *.bot and *.human have the same structure
 
 @Token
 - @
@@ -36,6 +38,7 @@
 - ==
 - -
 - word // a // inside quotes e.g "//" is a word, not a comment
+- % // attach to the name, e.g %tokenize, no space
 
 @Node
 - @Token // the token of this line
@@ -51,13 +54,15 @@
 - AST of @Node // tree of nodes, one per line
 
 $Parser
+- provide relevant method signatures
 - @Data -> tokenize -> @Tokens
 - @Tokens + @Structure -> parser -> ?Parsed
 
 $GoToDefinition
 - define for me
 - single .human file plus its sibling *.bot only
-- on a definition header of @,$,? go to the same header in the *.bot
+- on a definition header of @,$,?,# go to the same header in the *.bot
+- for % in *.bot it means go to the code file and line
 - if no *.bot or header, stay on the definition
 
 $Highlighter
@@ -72,13 +77,14 @@ $Highlighter
 - +
 - ==
 - -
+- %
 
 $Linter
 - define for me
 - unused-definition is a warning
 - missing-robot only checked when file info is passed
 - [path][line] target must exist, warning if the file or line is missing
-- [path] is relative to the folder that holds .git or SKILLS.md
+- [path] is relative to the folder that holds .git or the parent of spec folder
 - missing-human, same as missing-robot, for *.bot
 
 $LSP

@@ -27,7 +27,26 @@ export function collectSymbols(parsed: Parsed): SymbolRef[] {
 }
 
 export function findDefinition(parsed: Parsed, key: string): Location | undefined {
+  if (key.startsWith('#')) return parsed.nodes.map(requirementHeader).find((h) => h?.key === key)?.location
   return collectSymbols(parsed).find((s) => s.isDefinition && s.key === key)?.location
+}
+
+function requirementHeader(node: Node): { key: string; location: Location } | undefined {
+  if (node.kind !== 'header' || node.tokens[0]?.kind !== 'prefix' || node.tokens[0].text !== '#') return undefined
+  const content = node.tokens.slice(1).filter((t) => t.kind !== 'comment' && t.kind !== 'comment_sentence' && !parsePointer(t))
+  if (!content.length) return undefined
+  const first = node.tokens[0]
+  const last = content.at(-1)!
+  return {
+    key: '#' + content.map((t) => t.text).join(' '),
+    location: { line: node.line, col: first.col, length: last.col + last.length - first.col },
+  }
+}
+
+function requirementAt(parsed: Parsed, line: number, col: number) {
+  const node = parsed.nodes.find((n) => n.line === line)
+  const header = node && requirementHeader(node)
+  return header && col >= header.location.col && col <= header.location.col + header.location.length ? header : undefined
 }
 
 function tokenAt(parsed: Parsed, line: number, col: number): Token | undefined {
@@ -74,6 +93,11 @@ export function definitionAt(
   col: number,
   robot?: Parsed,
 ): Location | undefined {
+  const requirement = requirementAt(parsed, line, col)
+  if (requirement) {
+    const target = robot && findDefinition(robot, requirement.key)
+    return target ? { ...target, file: 'robot' } : requirement.location
+  }
   const sym = symbolAt(parsed, line, col)
   if (!sym) return undefined
   if (sym.isDefinition && robot) {
@@ -83,9 +107,20 @@ export function definitionAt(
   return findDefinition(parsed, sym.key)
 }
 
-// In a .bot: cursor on a definition header -> the [path][line] it ends with, if any.
+// In a .bot: cursor on a definition header or a % child line -> the [path][line] it ends with, if any.
 // The caller checks the file exists and falls back to definitionAt when it does not.
 export function pointerAt(parsed: Parsed, line: number, col: number): Pointer | undefined {
+  const method = parsed.nodes.find((n) => n.kind === 'child' && n.line === line && n.token?.kind === 'percent')
+  if (method) {
+    // cursor on the % or the method name that follows it
+    const [percent, name] = method.tokens.filter((t) => t.kind !== 'bullet')
+    const on = (t?: Token) => t && col >= t.col && col <= t.col + t.length
+    return on(percent) || on(name) ? pointerOf(method) : undefined
+  }
+  if (requirementAt(parsed, line, col)) {
+    const node = parsed.nodes.find((n) => n.kind === 'header' && n.line === line)
+    return node ? pointerOf(node) : undefined
+  }
   const sym = symbolAt(parsed, line, col)
   if (!sym?.isDefinition) return undefined
   const node = parsed.nodes.find((n) => n.kind === 'header' && n.line === line)
