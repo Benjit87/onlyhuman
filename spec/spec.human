@@ -59,13 +59,14 @@ $Parser
 - @Tokens + @Structure -> parser -> ?Parsed
 
 $GoToDefinition
-- define for me
+- provide relevant method signatures with some explaination
 - single .human file plus its sibling *.bot only
 - on a definition header of @,$,?,# go to the same header in the *.bot
 - for % in *.bot it means go to the code file and line
 - if no *.bot or header, stay on the definition
 
 $Highlighter
+- provide relevant method signatures with some explaination
 - each token type gets its own color
 - @Token -> colour -> editor
 - @
@@ -80,7 +81,7 @@ $Highlighter
 - %
 
 $Linter
-- define for me
+- provide relevant method signatures with some explaination
 - unused-definition is a warning
 - missing-robot only checked when file info is passed
 - [path][line] target must exist, warning if the file or line is missing

@@ -3,7 +3,8 @@
 
 #implementation [./package.json][1]
 - version 0.2.0, kept in step with vscode/package.json
-- language is typescript, node >= 20, strict mode
+- implement a token parser for the human spec language; "human.skills" refers to the onlyhuman skill's *.human and *.bot files
+- language is TypeScript, development requires Node >= 22.18, strict mode
 - core is pure functions, no editor or fs dependency, so $LSP and $CLI share it
 - $Linter, $GoToDefinition and $Highlighter work on *.bot as well as *.human
 - layout
@@ -137,6 +138,9 @@ $Parser [./src/parser.ts][16]
 
 $Linter [./src/linter.ts][19]
 - ?Parsed -> lint -> diagnostics
+- method signatures
+  - %lint(parsed: Parsed, options: LintOptions = {}): Diagnostic[] [./src/linter.ts][19] // pure: parse tree + optional file info -> diagnostics, sorted by line then col
+  - %LintOptions [./src/linter.ts][6] // optional file info enables missing-robot, missing-human and broken-pointer
 - diagnostic = rule, severity, line, col, length, message
 - definition = a header whose first token is @ ? or $ plus a name
 - reference = @ ? or $ plus a name anywhere outside a comment, names are case-sensitive and per prefix, so @Data != ?Data
@@ -170,6 +174,13 @@ $GoToDefinition [./src/definition.ts][90]
 - (?Parsed, position) -> find token -> definition location
 - (?Parsed, name) -> definition location
 - name = prefix + name, e.g @Token
+- method signatures
+  - %collectSymbols(parsed: Parsed): SymbolRef[] [./src/definition.ts][11] // shared definition and reference scan, also used by $Linter
+  - %findDefinition(parsed: Parsed, key: string): Location | undefined [./src/definition.ts][29] // by name, key = prefix + name
+  - %definitionAt(parsed: Parsed, line: number, col: number, robot?: Parsed): Location | undefined [./src/definition.ts][90] // by position
+  - %pointerAt(parsed: Parsed, line: number, col: number): Pointer | undefined [./src/definition.ts][112] // in a *.bot, header or % line to its [path][line]
+  - %parsePointer(token: Token): Pointer | undefined [./src/definition.ts][63] // parse the glued [path][line] word without reading the file
+  - %pointerOf(node: Node): Pointer | undefined [./src/definition.ts][69] // find the first pointer in a header or % child line
 - found: returns line, col, length of the defining header
 - not found, or token is not an @ ? $ reference or an eligible header: returns none
 - duplicates: first definition wins, $Linter reports the rest
@@ -196,6 +207,20 @@ $Highlighter [./vscode/syntaxes/human.tmLanguage.json][1]
 - a textmate grammar registered under contributes.grammars in vscode/package.json
 - *.bot gets the same grammar through its own language id
 - lexical only, no server needed, so it does not depend on $LSP or $CLI
+- method signatures // the highlighter is declarative; these are its grammar rules, one per token class
+  - %comment [./vscode/syntaxes/human.tmLanguage.json][20] // comment.line.double-slash.human, // to end of line
+  - %requirement [./vscode/syntaxes/human.tmLanguage.json][24] // markup.heading.human, # to end of line or comment
+  - %entity [./vscode/syntaxes/human.tmLanguage.json][29] // entity.name.type.human, @name
+  - %state [./vscode/syntaxes/human.tmLanguage.json][33] // variable.other.constant.human, ?name
+  - %service [./vscode/syntaxes/human.tmLanguage.json][37] // entity.name.function.human, $name
+  - %bare-prefix [./vscode/syntaxes/human.tmLanguage.json][41] // punctuation.definition.prefix.human, a prefix alone
+  - %arrow [./vscode/syntaxes/human.tmLanguage.json][45] // keyword.operator.arrow.human
+  - %plus [./vscode/syntaxes/human.tmLanguage.json][49] // keyword.operator.plus.human
+  - %equals [./vscode/syntaxes/human.tmLanguage.json][53] // keyword.operator.equals.human
+  - %bullet [./vscode/syntaxes/human.tmLanguage.json][57] // punctuation.definition.list.begin.human
+  - %dash [./vscode/syntaxes/human.tmLanguage.json][61] // punctuation.definition.dash.human
+  - %word [./vscode/syntaxes/human.tmLanguage.json][65] // string.unquoted.word.human
+  - %percent [./vscode/syntaxes/robot.tmLanguage.json][10] // keyword.operator.percent.human, only in *.bot
 - each token type gets its own highlighting scope; the editor theme picks the actual colour
   - the @ name // entity.name.type
   - the ? name // variable.other.constant
@@ -237,13 +262,11 @@ $CLI [./src/cli.ts][19]
 - the cli passes file info, so missing-robot, missing-human and broken-pointer are checked on lint
 - $LSP passes file info too when the file is on disk
 
-// assumptions, not answered in spec.human, change spec.human if wrong
-// 1. in a *.bot, go-to-definition on a header goes to the code line in its [path][line], not back to the .human header
-// 2. *.bot gets its own language id onlyhuman-robot that reuses the same grammar, so *.human and *.bot are configured separately
-// 3. header consistency between .human and .bot is not linted, it is not in spec.human
-// 4. when both bases could apply, the nearest .git folder takes precedence over the parent of spec/
-// 5. the local install script lives at vscode/install-local.sh and uses the VS Code code command available on PATH
-// 6. no license is set until the human decides, vsce warns without one
-// 7. the spec now says published to the marketplace, so the .bot treats publishing as a human step and asks first, the earlier advice was to keep it internal
-// 8. an operator listing may have a trailing // comment, but no other content; this follows the existing comment syntax and the single-operator listing rule
-// 9. # headers match by exact requirement text after the #; a trailing [path][line] in the .bot is ignored
+// assumptions, open points in spec.human, change spec.human if wrong
+// 1. "human.skills" in #implementation is read as the onlyhuman skill's *.human and *.bot language; change line 3 if it means another skill
+// 2. $GoToDefinition, $Highlighter and $Linter list their public method or grammar-rule signatures with brief explanations; private helpers are omitted
+// 3. $Highlighter has no executable methods, so its method signatures are the TextMate grammar rules and scopes; if you expect functions there, say so
+// 4. $Highlighter "each token type gets its own color" means a distinct TextMate scope per token type; the editor theme maps scopes to actual colors
+// 5. "published to the marketplace" is a release requirement; the robot prepares and verifies the .vsix and asks before publishing, because publishing is a public, human-authorized step
+// 6. development uses Node >= 22.18; the bundled server targets the Node runtime shipped with VS Code, and esbuild targets node18
+// 7. in a *.bot, go-to-definition on a header or % line goes to its code pointer, not back to the .human header; the .human definition remains the source of intent
