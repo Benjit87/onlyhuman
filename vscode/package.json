@@ -8,6 +8,7 @@
     "type": "git",
     "url": "https://github.com/Benjit87/onlyhuman.git"
   },
+  "license": "MIT",
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -64,7 +65,7 @@
   },
   "scripts": {
     "build": "node build.mjs",
-    "package": "vsce package --skip-license"
+    "package": "vsce package"
   },
   "devDependencies": {
     "esbuild": "^0.25.0",

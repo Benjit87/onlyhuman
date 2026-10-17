@@ -1,22 +1,37 @@
 {
   "name": "onlyhuman",
   "version": "0.2.0",
-  "private": true,
+  "description": "A descriptive language for writing specs in plain bullets, with a CLI linter and go-to-definition.",
+  "license": "MIT",
   "type": "module",
-  "bin": { "onlyhuman": "src/cli.ts" },
+  "bin": { "onlyhuman": "dist/cli.js" },
+  "files": ["dist", "README.md", "LICENSE"],
+  "repository": { "type": "git", "url": "git+https://github.com/Benjit87/onlyhuman.git" },
+  "homepage": "https://github.com/Benjit87/onlyhuman#readme",
+  "bugs": { "url": "https://github.com/Benjit87/onlyhuman/issues" },
+  "keywords": ["onlyhuman", "spec", "specification", "language", "linter", "cli"],
+  "author": "Benjit87",
   "scripts": {
     "test": "node --test \"tests/*.test.ts\"",
     "lint:spec": "node src/cli.ts lint spec/spec.human",
     "typecheck": "tsc --noEmit",
-    "lsp": "node src/lsp/server.ts --stdio"
+    "lsp": "node src/lsp/server.ts --stdio",
+    "build:cli": "esbuild src/cli.ts --bundle --platform=node --format=esm --target=node20 --outfile=dist/cli.js",
+    "prepublishOnly": "npm test && npm run typecheck && npm run build:cli"
   },
-  "engines": { "node": ">=22.18" },
-  "dependencies": {
-    "vscode-languageserver": "^9.0.1",
-    "vscode-languageserver-textdocument": "^1.0.12"
+  "engines": { "node": ">=20" },
+  "devEngines": {
+    "runtime": {
+      "name": "node",
+      "version": ">=22.18",
+      "onFail": "error"
+    }
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
-    "typescript": "^5.7.0"
+    "esbuild": "^0.25.0",
+    "typescript": "^5.7.0",
+    "vscode-languageserver": "^9.0.1",
+    "vscode-languageserver-textdocument": "^1.0.12"
   }
 }

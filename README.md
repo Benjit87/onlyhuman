@@ -84,11 +84,18 @@ The full rules, including how the robot behaves, are in [SKILL.md](SKILL.md). Th
 
 ## Tools
 
-The parser, linter, go-to-definition and highlighter work on both `.human` and `.bot` files. Requires Node 22.18 or newer.
+The parser, linter, go-to-definition and highlighter work on both `.human` and `.bot` files. Development requires Node 22.18 or newer; the published CLI bundle targets Node 20 or newer.
 
 ```bash
 npm install
 npm test
+```
+
+For the published CLI:
+
+```bash
+npm install --global onlyhuman
+onlyhuman lint spec/spec.human
 ```
 
 Lint a file. This prints `file:line:col severity rule message` and exits 1 on errors:
@@ -128,6 +135,8 @@ code --extensionDevelopmentPath=/path/to/onlyhuman/vscode /path/to/onlyhuman/spe
 | `src/definition.ts` | go-to-definition and `[path][line]` pointers |
 | `src/files.ts` | the only file-system access: sibling file and project root |
 | `src/cli.ts`, `src/lsp/server.ts` | command line and language server |
+| `npm.sh` | build, verify and publish the CLI package |
+| `LICENSE` | MIT license |
 | `vscode/` | editor client and highlighting grammars |
 | `tests/` | unit tests |
 | `spec/` | the project's own `spec.human` and `spec.bot` |
