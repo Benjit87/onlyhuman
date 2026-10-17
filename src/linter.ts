@@ -38,6 +38,11 @@ export function lint(parsed: Parsed, options: LintOptions = {}): Diagnostic[] {
       add('orphan-child', 'error', first, '- line has no header above it')
     }
 
+    if (node.kind === 'child' && node.tokens[1]?.kind === 'dash') {
+      const content = node.tokens.slice(2).filter((t) => t.kind !== 'comment' && t.kind !== 'comment_sentence')
+      if (content.length) add('repeated-bullet', 'error', node.tokens[1], 'nest children with 2-space indentation; a listed dash must stand alone')
+    }
+
     checkOperators(node, add)
   }
 

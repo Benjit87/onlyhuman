@@ -22,6 +22,12 @@ test('tokenizer: prefix + name, operators, bullet vs dash, comment', () => {
   assert.deepEqual(kinds('- *.human file'), ['bullet:-', 'word:*.human', 'word:file'])
 })
 
+test('tokenizer: percent is its own token, with or without a name', () => {
+  assert.deepEqual(kinds('  - %parse // x'), ['bullet:-', 'percent:%', 'word:parse', 'comment://', 'comment_sentence:x'])
+  assert.deepEqual(kinds('- %'), ['bullet:-', 'percent:%'])
+  assert.deepEqual(rules('@A\n- %m\n- x'), ['unused-definition'])
+})
+
 test('tokenizer: comment text is never tokenized, positions are right', () => {
   const t = tokenize('- a // see @X -> y')
   assert.equal(t.at(-1)!.kind, 'comment_sentence')
@@ -55,6 +61,8 @@ test('linter rules', () => {
   assert.ok(rules('@A\n - x\n').includes('bad-indent'))
   assert.ok(rules('@A\n\t- x\n').includes('bad-indent'))
   assert.ok(rules('@A\n    - x\n').includes('indent-jump'))
+  assert.ok(rules('@A\n- - x\n').includes('repeated-bullet'))
+  assert.ok(!rules('@A\n- - // dash token\n').includes('repeated-bullet'))
   assert.ok(rules('@A\n- @Nodee\n').includes('undefined-reference'))
   assert.ok(rules('@A\n@A\n').includes('duplicate-definition'))
   assert.ok(rules('@A\n- x ->\n').includes('dangling-operator'))
@@ -100,10 +108,21 @@ test('go-to-definition: definition header jumps to the same header in the robot'
   // no robot, or header missing in it: stay on the definition
   assert.deepEqual(definitionAt(human, 1, 1), { line: 1, col: 0, length: 2 })
   assert.deepEqual(definitionAt(human, 1, 1, parseText('$B\n')), { line: 1, col: 0, length: 2 })
-  // # headers have no target
-  assert.equal(definitionAt(human, 6, 2, robot), undefined)
+  // # headers without a matching robot header stay on the human header
+  assert.deepEqual(definitionAt(human, 6, 2, robot), { line: 6, col: 0, length: 4 })
   // name form is unchanged, always the .human header
   assert.deepEqual(findDefinition(human, '@A'), { line: 1, col: 0, length: 2 })
+})
+
+test('go-to-definition: # requirement headers match their robot header and pointer', () => {
+  const human = parseText('#implementation\n#vscode deployment\n')
+  const robot = parseText('#implementation [./src/a.ts][3]\n#vscode deployment [./src/b.ts][9]\n')
+  assert.deepEqual(definitionAt(human, 1, 3, robot), { line: 1, col: 0, length: 15, file: 'robot' })
+  assert.deepEqual(definitionAt(human, 2, 10, robot), { line: 2, col: 0, length: 18, file: 'robot' })
+  assert.deepEqual(definitionAt(human, 1, 3), { line: 1, col: 0, length: 15 })
+  assert.deepEqual(findDefinition(robot, '#vscode deployment'), { line: 2, col: 0, length: 18 })
+  assert.equal(pointerAt(robot, 1, 3)?.path, './src/a.ts')
+  assert.equal(pointerAt(robot, 1, 20), undefined)
 })
 
 test('linter: missing-human and broken-pointer on a robot', () => {
@@ -130,14 +149,24 @@ test('go-to-definition in a robot: header -> its pointer, reference -> its heade
   assert.deepEqual(definitionAt(robot, 4, 3), { line: 1, col: 0, length: 2 })
 })
 
-test('files: project root is the nearest folder with .git or SKILL.md', () => {
+test('files: pointer base prefers nearest .git, then parent of spec/', () => {
   const root = mkdtempSync(join(tmpdir(), 'oh-'))
   mkdirSync(join(root, 'spec'))
-  writeFileSync(join(root, 'SKILL.md'), '')
   writeFileSync(join(root, 'a.ts'), 'l1\nl2\nl3\n')
   assert.equal(findProjectRoot(join(root, 'spec', 'x.bot')), root)
   const count = pointerLineCounter(join(root, 'spec', 'x.bot'))!
   assert.equal(count('./a.ts'), 3) // trailing newline is not an extra line
   assert.equal(count('./nope.ts'), undefined)
+  mkdirSync(join(root, 'spec', 'nested'))
+  writeFileSync(join(root, 'spec', '.git'), '')
+  assert.equal(findProjectRoot(join(root, 'spec', 'nested', 'x.bot')), join(root, 'spec'))
+  assert.equal(findProjectRoot(join(root, 'other', 'x.bot')), undefined)
   rmSync(root, { recursive: true })
+})
+
+test('go-to-definition in a robot: a % child line goes to its pointer', () => {
+  const robot = parseText('$Parser [./a.ts][1]\n- %parse(x): Y [./a.ts][5] // note\n')
+  assert.equal(pointerAt(robot, 2, 3)?.line, 5) // on %
+  assert.equal(pointerAt(robot, 2, 5)?.line, 5) // on the name
+  assert.equal(pointerAt(robot, 2, 40), undefined) // elsewhere on the line
 })
