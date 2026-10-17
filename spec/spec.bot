@@ -16,12 +16,17 @@
   - src/files.ts // the only fs access: sibling file path and loading, used by $CLI and $LSP
   - src/lsp/server.ts // $LSP
   - src/cli.ts // $CLI
+  - dist/cli.js // bundled CLI published to npm
+  - npm.sh // build, verify and publish the CLI
   - vscode/ // thin client, starts the lsp for *.human and *.bot
   - vscode/dist/ // bundled output of esbuild, what the .vsix ships
   - vscode/install-local.sh // bash script to build, package and install the extension locally
   - vscode/syntaxes/human.tmLanguage.json // $Highlighter grammar for *.human
   - vscode/syntaxes/robot.tmLanguage.json // same grammar for *.bot, language id onlyhuman-robot
   - tests/ // unit tests on the pure functions
+  - README.md // project documentation and npm package page
+  - LICENSE // MIT license for the repository
+  - vscode/LICENSE // the same MIT license, shipped in the .vsix
 - [path][line] numbers are targets and get updated after coding, applies to every header
 
 #vscode deployment [./vscode/package.json][1]
@@ -38,7 +43,7 @@
   - the client starts dist/server.js with `module`, not `command: node`, so no node install or version is needed on the user machine
   - the server accepts both ipc and stdio, createConnection picks from the arguments, so the dev setup keeps working
 - publisher is benjit87
-  - package.json also needs license, repository https://github.com/Benjit87/onlyhuman, description and categories
+  - package.json has the MIT license, repository https://github.com/Benjit87/onlyhuman, description and categories
   - vscode/README.md is the listing page
 - published to the marketplace
   - the publisher benjit87 must already exist on the marketplace
@@ -51,8 +56,43 @@
   - installs dependencies, builds the bundles, packages the .vsix and installs it with code --install-extension
   - exits with a nonzero status if any step fails
 - verify before handing over
-  - the .vsix contents are listed with npx vsce ls and contain only dist, package.json, README and the grammars
+  - the .vsix contents are listed with npx vsce ls and contain only dist, package.json, README, LICENSE and the grammars
   - the bundled server answers an lsp initialize and a definition request over ipc and stdio
+
+# npm package for cli [./package.json][1]
+- publish the CLI to the npm registry
+- provide npm.sh at the repository root
+  - %npm.sh [./npm.sh][1] // executable bash entry point
+  - run from any working directory and resolve its own location
+  - use bash with set -euo pipefail
+  - require node and npm; fail with a clear message if either is missing
+  - use a project-local .npm-cache so a broken global npm cache does not block publishing
+  - install dependencies with npm ci
+  - run npm test and npm run typecheck
+  - build the CLI bundle with npm run build:cli
+  - verify the package with npm pack --dry-run
+  - verify publish readiness with npm publish --dry-run
+  - check npm whoami; fail with a message to run npm login when not authenticated
+  - ask for explicit confirmation before the real npm publish
+  - never print or store the npm token; use the human's npm login or NODE_AUTH_TOKEN
+  - exit nonzero if any step fails
+- package setup for the CLI
+  - bundle src/cli.ts with esbuild into dist/cli.js, platform node, format esm, target node20
+  - point bin.onlyhuman at ./dist/cli.js and keep the node shebang
+  - add root esbuild as a devDependency and build:cli to scripts
+  - the CLI runtime has no npm dependencies; keep the vscode-languageserver packages in devDependencies for the LSP source
+  - set files to dist, README.md and LICENSE; no src, tests, vscode or node_modules in the package
+  - remove private: true; npm refuses to publish a private package
+  - set engines.node to >=20 for the bundle; keep development at >=22.18
+  - keep the MIT license and add description, repository, homepage, bugs, keywords and author
+  - add prepublishOnly = npm test && npm run typecheck && npm run build:cli
+  - check `npm view onlyhuman version`; if the name is taken, use the scoped name "@benjit87/onlyhuman" with publishConfig.access public
+  - when using the fallback scope, publish with npm publish --access public
+- alternative: keep bin.onlyhuman at src/cli.ts and ship src/, requiring Node >=22.18; no esbuild step
+- decisions for the human
+  - package name and scope
+  - whether to publish the parser API as imports, not just the CLI
+  - the minimum Node version for CLI users
 
 @Data [./src/types.ts][1]
 - *.human file, utf-8, lf or crlf
@@ -270,3 +310,7 @@ $CLI [./src/cli.ts][19]
 // 5. "published to the marketplace" is a release requirement; the robot prepares and verifies the .vsix and asks before publishing, because publishing is a public, human-authorized step
 // 6. development uses Node >= 22.18; the bundled server targets the Node runtime shipped with VS Code, and esbuild targets node18
 // 7. in a *.bot, go-to-definition on a header or % line goes to its code pointer, not back to the .human header; the .human definition remains the source of intent
+// 8. npm.sh uses a project-local .npm-cache so the publish flow does not depend on the state of the global npm cache
+// 9. the CLI bundle uses esbuild and targets Node 20 even though development uses Node 22.18; the source-TypeScript alternative keeps Node >=22.18
+// 10. package name availability is not checked until publish; the current name is onlyhuman and the scoped fallback is "@benjit87/onlyhuman"
+// 11. the npm package exports only the CLI; the parser API remains internal until the human asks for it

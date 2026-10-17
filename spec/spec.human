@@ -13,6 +13,10 @@
 - published to the marketplace
 - provide a bash script to install locally
 
+# npm package for cli
+- package for pushing to npm repository
+- provide a bash script for it npm.sh
+
 @Data
 - *.human file
 - *.bot file
