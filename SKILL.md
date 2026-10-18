@@ -1,6 +1,6 @@
 ---
 name: onlyhuman
-description: "Write and maintain onlyhuman specs, a descriptive language where the human writes *.human (intent, human-edited only) and the agent writes the matching *.bot (detailed spec) under the spec folder. Use when the user mentions *.human or *.bot files, says regenerate or regen, or wants a spec written and reviewed before implementation."
+description: "Write and maintain onlyhuman specs, a descriptive language where the human writes *.human (intent, human-edited only) and the agent writes the matching *.bot (detailed spec) under the spec folder. Also initialize a project SKILL.md at .onlyhuman/SKILL.md. Use when the user mentions *.human or *.bot files, says regenerate or regen, wants a spec written and reviewed before implementation, or wants to initialize a project skill."
 ---
 
 # introduction
@@ -58,6 +58,7 @@ description: "Write and maintain onlyhuman specs, a descriptive language where t
 - install with `npm i onlyhuman` in the project
   - run with `npx onlyhuman`
   - use `npm i -g onlyhuman` instead for a global `onlyhuman` command
+- `npx onlyhuman skill init [directory] [--force]` // write .onlyhuman/SKILL.md
 - `npx onlyhuman lint <file>` // *.human or *.bot
 - `npx onlyhuman def <name> <file>`
 - `npx onlyhuman def <file>:<line>:<col>`
