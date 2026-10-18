@@ -104,7 +104,7 @@ Initialize a project skill:
 onlyhuman skill init
 ```
 
-This writes `.onlyhuman/SKILL.md`; add `--force` to overwrite an existing file.
+This copies the project's `SKILL.md` into `.onlyhuman/SKILL.md`; add `--force` to overwrite an existing file.
 
 Lint a file. This prints `file:line:col severity rule message` and exits 1 on errors:
 
@@ -143,7 +143,7 @@ code --extensionDevelopmentPath=/path/to/onlyhuman/vscode /path/to/onlyhuman/spe
 | `src/definition.ts` | go-to-definition and `[path][line]` pointers |
 | `src/files.ts` | the only file-system access: sibling file and project root |
 | `src/cli.ts`, `src/lsp/server.ts` | command line and language server |
-| `src/skill.ts` | project skill template and `.onlyhuman/SKILL.md` writer |
+| `src/skill.ts` | copies `SKILL.md` into `.onlyhuman/SKILL.md` |
 | `npm.sh` | build, verify and publish the CLI package |
 | `LICENSE` | MIT license |
 | `vscode/` | editor client and highlighting grammars |

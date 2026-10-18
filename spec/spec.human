@@ -103,7 +103,7 @@ $LSP
 - $Linter
 
 $Skill
-- init -> write SKILL.md into .onlyhuman/SKILL.md
+- ./SKILL.md -> copy -> .onlyhuman/SKILL.md // copy file
 
 $CLI
 - cli def supports both name form and position form
