@@ -1,9 +1,15 @@
 #implementation
-- version: 0.2.0
+
 - implement a token parser for human.skills
 - implementation is in typescript
 - [path][line] numbers are targets and get updated after coding.
 - $Linter, $GoToDefinition and $Highlighter work on *.bot as well as *.human
+
+# version control
+- version: 0.3.0
+- update for all modules
+  - vscode/package.json
+  - package.json
 
 #vscode deployment
 - package as a .vsix, installed with code --install-extension
@@ -96,7 +102,11 @@ $LSP
 - $GoToDefinition
 - $Linter
 
+$Skill
+- ./SKILL.md -> copy -> .onlyhuman/SKILL.md // copy file
+
 $CLI
 - cli def supports both name form and position form
 - $GoToDefinition
 - $Linter
+- $Skill

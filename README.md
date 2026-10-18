@@ -98,6 +98,14 @@ npm install --global onlyhuman
 onlyhuman lint spec/spec.human
 ```
 
+Initialize a project skill:
+
+```bash
+onlyhuman skill init
+```
+
+This copies the project's `SKILL.md` into `.onlyhuman/SKILL.md`; add `--force` to overwrite an existing file.
+
 Lint a file. This prints `file:line:col severity rule message` and exits 1 on errors:
 
 ```bash
@@ -135,6 +143,7 @@ code --extensionDevelopmentPath=/path/to/onlyhuman/vscode /path/to/onlyhuman/spe
 | `src/definition.ts` | go-to-definition and `[path][line]` pointers |
 | `src/files.ts` | the only file-system access: sibling file and project root |
 | `src/cli.ts`, `src/lsp/server.ts` | command line and language server |
+| `src/skill.ts` | copies `SKILL.md` into `.onlyhuman/SKILL.md` |
 | `npm.sh` | build, verify and publish the CLI package |
 | `LICENSE` | MIT license |
 | `vscode/` | editor client and highlighting grammars |

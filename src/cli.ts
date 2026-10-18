@@ -1,16 +1,18 @@
 #!/usr/bin/env node
-// $CLI: onlyhuman lint <file> | onlyhuman def <name> <file> | onlyhuman def <file>:<line>:<col>
+// $CLI: onlyhuman lint <file> | onlyhuman def <name> <file> | onlyhuman def <file>:<line>:<col> | onlyhuman skill init
 import { readFileSync } from 'node:fs'
 import { relative } from 'node:path'
 import { definitionAt, findDefinition, pointerAt } from './definition.ts'
 import { loadRobot, pointerLineCounter, pointerTargetExists, robotPathFor, siblingExists } from './files.ts'
 import { lint } from './linter.ts'
 import { parseText } from './parser.ts'
+import { initSkill } from './skill.ts'
 
 const USAGE = `usage:
   onlyhuman lint <file>             *.human or *.bot
   onlyhuman def <name> <file>        e.g. onlyhuman def @Token spec.human
-  onlyhuman def <file>:<line>:<col>  1-based line and col`
+  onlyhuman def <file>:<line>:<col>  1-based line and col
+  onlyhuman skill init [directory] [--force]  write .onlyhuman/SKILL.md`
 
 function load(file: string) {
   return parseText(readFileSync(file, 'utf8'))
@@ -18,6 +20,23 @@ function load(file: string) {
 
 function main(argv: string[]): number {
   const [cmd, ...rest] = argv
+
+  if (cmd === 'skill' && rest[0] === 'init') {
+    const args = rest.slice(1)
+    const paths = args.filter((a) => a !== '--force')
+    if (paths.length > 1) {
+      console.error(USAGE)
+      return 2
+    }
+    try {
+      const target = initSkill(paths[0] ?? '.', { force: args.includes('--force') })
+      console.log(`created ${target}`)
+      return 0
+    } catch (e) {
+      console.error((e as Error).message)
+      return 1
+    }
+  }
 
   if (cmd === 'lint' && rest.length === 1) {
     const file = rest[0]

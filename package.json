@@ -1,15 +1,33 @@
 {
   "name": "onlyhuman",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "A descriptive language for writing specs in plain bullets, with a CLI linter and go-to-definition.",
   "license": "MIT",
   "type": "module",
-  "bin": { "onlyhuman": "dist/cli.js" },
-  "files": ["dist", "README.md", "LICENSE"],
-  "repository": { "type": "git", "url": "git+https://github.com/Benjit87/onlyhuman.git" },
+  "bin": {
+    "onlyhuman": "dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Benjit87/onlyhuman.git"
+  },
   "homepage": "https://github.com/Benjit87/onlyhuman#readme",
-  "bugs": { "url": "https://github.com/Benjit87/onlyhuman/issues" },
-  "keywords": ["onlyhuman", "spec", "specification", "language", "linter", "cli"],
+  "bugs": {
+    "url": "https://github.com/Benjit87/onlyhuman/issues"
+  },
+  "keywords": [
+    "onlyhuman",
+    "spec",
+    "specification",
+    "language",
+    "linter",
+    "cli"
+  ],
   "author": "Benjit87",
   "scripts": {
     "test": "node --test \"tests/*.test.ts\"",
@@ -19,7 +37,9 @@
     "build:cli": "esbuild src/cli.ts --bundle --platform=node --format=esm --target=node20 --outfile=dist/cli.js",
     "prepublishOnly": "npm test && npm run typecheck && npm run build:cli"
   },
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "devEngines": {
     "runtime": {
       "name": "node",
