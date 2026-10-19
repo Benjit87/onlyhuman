@@ -2,7 +2,7 @@
   "name": "onlyhuman-vscode",
   "displayName": "onlyhuman",
   "description": "Highlighting, linting and go-to-definition for onlyhuman *.human and *.bot spec files",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "publisher": "benjit87",
   "repository": {
     "type": "git",
