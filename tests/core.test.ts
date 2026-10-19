@@ -68,6 +68,12 @@ test('linter rules', () => {
   assert.ok(rules('$A\n- x ->\n').includes('dangling-operator'))
   assert.ok(rules('$A\n- +\n').includes('dangling-operator') === false) // lone operator = listing
   assert.ok(rules('$A\n- + x y\n').includes('dangling-operator'))
+  assert.ok(rules('#1\n#2\n').includes('consecutive-header'))
+  assert.ok(rules('#1\n\n#2\n').includes('consecutive-header'))
+  assert.ok(rules('#1\n// note\n#2\n').includes('consecutive-header'))
+  assert.ok(!rules('#1\n- detail\n#2\n').includes('consecutive-header'))
+  assert.ok(!rules('// a\n// b\n').includes('consecutive-header'))
+  assert.ok(!rules('#1\n').includes('consecutive-header'))
   assert.ok(rules('$A\n').includes('unused-definition'))
 })
 

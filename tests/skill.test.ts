@@ -9,7 +9,7 @@ import { initSkill } from '../src/skill.ts'
 
 const cli = fileURLToPath(new URL('../src/cli.ts', import.meta.url))
 
-const librarySource = readFileSync(fileURLToPath(new URL('../SKILL.md', import.meta.url)), 'utf8')
+const librarySource = readFileSync(fileURLToPath(new URL('../onlyhuman-skill/SKILL.md', import.meta.url)), 'utf8')
 
 test('skill: init copies the library SKILL.md byte-for-byte and ignores the project SKILL.md', () => {
   const root = mkdtempSync(join(tmpdir(), 'oh-skill-'))
@@ -17,7 +17,7 @@ test('skill: init copies the library SKILL.md byte-for-byte and ignores the proj
   mkdirSync(project)
   writeFileSync(join(project, 'SKILL.md'), 'project skill, must not be used\n')
   const target = initSkill(project)
-  assert.equal(target, join(project, '.onlyhuman', 'SKILL.md'))
+  assert.equal(target, join(project, 'onlyhuman-skill', 'SKILL.md'))
   assert.equal(readFileSync(target, 'utf8'), librarySource)
   assert.equal(readFileSync(join(project, 'SKILL.md'), 'utf8'), 'project skill, must not be used\n')
   rmSync(root, { recursive: true })
@@ -49,8 +49,8 @@ test('skill: CLI init copies the library file and requires --force to replace it
 
   const first = spawnSync(process.execPath, [cli, 'skill', 'init', project], { encoding: 'utf8' })
   assert.equal(first.status, 0, first.stderr)
-  assert.match(first.stdout, /created .*\.onlyhuman\/SKILL\.md/)
-  assert.equal(readFileSync(join(project, '.onlyhuman', 'SKILL.md'), 'utf8'), librarySource)
+  assert.match(first.stdout, /created .*onlyhuman-skill\/SKILL\.md/)
+  assert.equal(readFileSync(join(project, 'onlyhuman-skill', 'SKILL.md'), 'utf8'), librarySource)
 
   const second = spawnSync(process.execPath, [cli, 'skill', 'init', project], { encoding: 'utf8' })
   assert.equal(second.status, 1)
@@ -58,6 +58,6 @@ test('skill: CLI init copies the library file and requires --force to replace it
 
   const forced = spawnSync(process.execPath, [cli, 'skill', 'init', project, '--force'], { encoding: 'utf8' })
   assert.equal(forced.status, 0, forced.stderr)
-  assert.equal(readFileSync(join(project, '.onlyhuman', 'SKILL.md'), 'utf8'), librarySource)
+  assert.equal(readFileSync(join(project, 'onlyhuman-skill', 'SKILL.md'), 'utf8'), librarySource)
   rmSync(root, { recursive: true })
 })

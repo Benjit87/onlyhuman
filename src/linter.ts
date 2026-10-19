@@ -46,6 +46,22 @@ export function lint(parsed: Parsed, options: LintOptions = {}): Diagnostic[] {
     checkOperators(node, add)
   }
 
+  let previousPrefixHeader: Token | undefined
+  let childSincePrevious = false
+  for (const node of parsed.nodes) {
+    if (node.kind === 'child') {
+      childSincePrevious = true
+      continue
+    }
+    const token = node.kind === 'header' ? node.token : undefined
+    if (token?.kind !== 'prefix') continue
+    if (previousPrefixHeader && !childSincePrevious) {
+      add('consecutive-header', 'error', previousPrefixHeader, 'header must have at least one child line before the next header')
+    }
+    previousPrefixHeader = token
+    childSincePrevious = false
+  }
+
   const symbols = collectSymbols(parsed)
   const defs = new Map<string, number>()
   const referenced = new Set<string>()

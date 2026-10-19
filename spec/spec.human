@@ -1,6 +1,5 @@
 #implementation
-
-- implement a token parser for human.skills
+- a parser for onlyhuman skill syntax
 - implementation is in typescript
 - [path][line] numbers are targets and get updated after coding.
 - @Linter, @GoToDefinition and @Highlighter work on *.bot as well as *.human
@@ -34,6 +33,7 @@ $Structure
 - indent using spaces only; any other indentation is an error
 - a line with only an operator after its bullet marker lists that operator
 - both *.bot and *.human have the same structure
+- consecutive-header is an error
 
 $Token
 - $
@@ -78,7 +78,6 @@ $Tokens
 @Highlighter
 - provide relevant method signatures with some explaination
 - each token type gets its own color
-- $Token -> colour -> editor
 - $
 - @
 - ?
@@ -103,10 +102,10 @@ $Tokens
 - @Linter
 
 @Skill
-- source is the SKILL.md that ships inside the onlyhuman library, fixed in the library, not looked up from the user path
+- source is the onlyhuman-skill/SKILL.md that ships inside the onlyhuman library, fixed in the library, not looked up from the user path
 - copy as is, no generating or editing
 - nothing from the user repo is used
-- target is .onlyhuman/SKILL.md under the user path
+- target is onlyhuman-skill/SKILL.md under the user path
 
 @CLI
 - cli def supports both name form and position form

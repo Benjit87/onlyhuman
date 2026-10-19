@@ -2,7 +2,7 @@
 // [path][line] = where the code lives, [path] is relative to the nearest folder that holds .git, or the parent of spec/ when no .git is found
 
 #implementation [./package.json][1]
-- implement a token parser for the human spec language; "human.skills" refers to the onlyhuman skill's *.human and *.bot files
+- implement a parser for onlyhuman skill syntax; this covers the *.human and *.bot spec language described here
 - language is TypeScript, development requires Node >= 22.18, strict mode
 - parser, linter and definition core are pure functions, no editor or fs dependency; @LSP and @CLI share them
 - @Linter, @GoToDefinition and @Highlighter work on *.bot as well as *.human
@@ -16,7 +16,7 @@
   - src/lsp/server.ts // @LSP
   - src/cli.ts // @CLI
   - src/skill.ts // @Skill copy operation
-  - SKILL.md // Codex skill instructions and tooling
+  - onlyhuman-skill/SKILL.md // Codex skill instructions and tooling
   - dist/cli.js // bundled CLI published to npm
   - npm.sh // build, verify and publish the CLI
   - vscode/ // thin client, starts the lsp for *.human and *.bot
@@ -125,6 +125,7 @@ $Structure [./src/parser.ts][6]
 - a line with only one operator after its child marker lists that operator; an optional // comment may follow
 - a listed dash is the child marker followed by a dash token and an optional comment
 - *.human and *.bot use the same child and indentation rules
+- consecutive-header is an error: a prefix header must have at least one child line before the next prefix header; blank lines do not count
 
 $Token [./src/types.ts][15]
 - every token has kind, text, line, col, length // 1-based line, 0-based col
@@ -199,6 +200,7 @@ $Node [./src/types.ts][28]
   - bad-indent // error: tab, or leading spaces not a multiple of 2
   - indent-jump // error: child deeper than parent depth + 1
   - repeated-bullet // error: a dash token followed by other content after the child marker; use indentation for nesting
+  - consecutive-header // error: a prefix header followed by another prefix header with no child line between them; blank lines do not count
   - undefined-reference // error: reference with no definition e.g $Nodee
   - duplicate-definition // error: same prefix + name defined twice, reported on the second
   - dangling-operator // error: an operator missing a left or right operand
@@ -250,7 +252,6 @@ $Node [./src/types.ts][28]
 - the caller passes the parsed robot, the function does no file reading
 
 @Highlighter [./vscode/syntaxes/human.tmLanguage.json][1]
-- $Token -> colour -> editor
 - a textmate grammar registered under contributes.grammars in vscode/package.json
 - *.bot gets the same grammar through its own language id
 - lexical only, no server needed, so it does not depend on @LSP or @CLI
@@ -293,23 +294,23 @@ $Node [./src/types.ts][28]
 - vscode client in ./vscode starts the server for files *.human, and *.bot
 
 @Skill [./src/skill.ts][1]
-- source is the SKILL.md that ships inside the onlyhuman library, fixed in the library, not looked up from the user path
-  - %init(directory: string = ".", options?: InitSkillOptions): string [./src/skill.ts][13] // copy the library SKILL.md into <directory>/.onlyhuman/SKILL.md, return the target path
+- source is the onlyhuman-skill/SKILL.md that ships inside the onlyhuman library, fixed in the library, not looked up from the user path
+  - %init(directory: string = ".", options?: InitSkillOptions): string [./src/skill.ts][13] // copy the library skill file into <directory>/onlyhuman-skill/SKILL.md, return the target path
   - the source path is resolved from the library's own location, e.g. import.meta.url, never from <directory> or the current directory
-  - SKILL.md is listed in package.json files so it is present after npm i
-  - fail with a clear error when the library SKILL.md cannot be found
+  - onlyhuman-skill/SKILL.md is listed in package.json files so it is present after npm i
+  - fail with a clear error when the library skill file cannot be found
 - copy as is, no generating or editing
   - byte-for-byte with copyFileSync
 - nothing from the user repo is used
   - a SKILL.md in the user repo is neither read nor replaced by the source
-- target is .onlyhuman/SKILL.md under the user path
-  - create the .onlyhuman directory when missing
+- target is onlyhuman-skill/SKILL.md under the user path
+  - create the onlyhuman-skill directory when missing
   - refuse to overwrite an existing target without --force
   - print the written path
 - validation
-  - the source SKILL.md must pass skill-creator quick_validate.py
+  - the source onlyhuman-skill/SKILL.md must pass skill-creator quick_validate.py
   - onlyhuman lint validates .human and .bot specs, not Markdown
-- tests assert the copied file matches the library SKILL.md and ignores a different SKILL.md in the user project
+- tests assert the copied file matches onlyhuman-skill/SKILL.md and ignores a different SKILL.md in the user project
 
 @CLI [./src/cli.ts][21]
 - @GoToDefinition
@@ -317,9 +318,9 @@ $Node [./src/types.ts][28]
 - @Skill
 - onlyhuman skill init
   - %skillInit [./src/cli.ts][24] // parse the command and call initSkill
-  - copy the library SKILL.md as is to .onlyhuman/SKILL.md under the given directory
-  - create .onlyhuman when missing
-  - fail if the library SKILL.md is missing
+  - copy the library skill file as is to onlyhuman-skill/SKILL.md under the given directory
+  - create onlyhuman-skill when missing
+  - fail if the library skill file is missing
   - do not overwrite an existing file without --force
   - print the written path
 - onlyhuman lint <file>
@@ -337,19 +338,20 @@ $Node [./src/types.ts][28]
 - @LSP passes file info too when the file is on disk
 
 // assumptions, open points in spec.human, change spec.human if wrong
-// 1. "human.skills" in #implementation is read as the onlyhuman skill's *.human and *.bot language; change line 3 if it means another skill
-// 2. @GoToDefinition, @Highlighter and @Linter list their public method or grammar-rule signatures with brief explanations; private helpers are omitted
-// 3. @Highlighter has no executable methods, so its method signatures are the TextMate grammar rules and scopes; if you expect functions there, say so
-// 4. @Highlighter "each token type gets its own color" means a distinct TextMate scope per token type; the editor theme maps scopes to actual colors
-// 5. "published to the marketplace" is a release requirement; the robot prepares and verifies the .vsix and asks before publishing, because publishing is a public, human-authorized step
-// 6. development uses Node >= 22.18; the bundled server targets the Node runtime shipped with VS Code, and esbuild targets node18
-// 7. in a *.bot, go-to-definition on a header or % line goes to its code pointer, not back to the .human header; the .human definition remains the source of intent
-// 8. npm.sh uses a project-local .npm-cache so the publish flow does not depend on the state of the global npm cache
-// 9. the CLI bundle uses esbuild and targets Node 20 even though development uses Node 22.18; the source-TypeScript alternative keeps Node >=22.18
-// 10. package name availability is not checked until publish; the current name is onlyhuman and the scoped fallback is "@benjit87/onlyhuman"
-// 11. the npm package exports only the CLI; the parser API remains internal until the human asks for it
-// 12. # version control applies 0.4.0 to package.json, vscode/package.json and both lockfiles
-// 13. @Skill is exposed as onlyhuman skill init and writes .onlyhuman/SKILL.md under the given directory
-// 14. skill init refuses to overwrite an existing .onlyhuman/SKILL.md unless --force is passed
-// 15. @Skill in spec.human has no flow line now; --force, create-directory and print-path behaviour are kept from the previous spec as details
-// 16. "fixed in the library" is read as a file shipped in the npm package and located relative to the running code, not a copy embedded in source
+// 1. @GoToDefinition, @Highlighter and @Linter list their public method or grammar-rule signatures with brief explanations; private helpers are omitted
+// 2. @Highlighter has no executable methods, so its method signatures are the TextMate grammar rules and scopes; if you expect functions there, say so
+// 3. @Highlighter "each token type gets its own color" means a distinct TextMate scope per token type; the editor theme maps scopes to actual colors
+// 4. "published to the marketplace" is a release requirement; the robot prepares and verifies the .vsix and asks before publishing, because publishing is a public, human-authorized step
+// 5. development uses Node >= 22.18; the bundled server targets the Node runtime shipped with VS Code, and esbuild targets node18
+// 6. in a *.bot, go-to-definition on a header or % line goes to its code pointer, not back to the .human header; the .human definition remains the source of intent
+// 7. npm.sh uses a project-local .npm-cache so the publish flow does not depend on the state of the global npm cache
+// 8. the CLI bundle uses esbuild and targets Node 20 even though development uses Node 22.18; the source-TypeScript alternative keeps Node >=22.18
+// 9. package name availability is not checked until publish; the current name is onlyhuman and the scoped fallback is "@benjit87/onlyhuman"
+// 10. the npm package exports only the CLI; the parser API remains internal until the human asks for it
+// 11. # version control applies 0.4.0 to package.json, vscode/package.json and both lockfiles
+// 12. @Skill is exposed as onlyhuman skill init and writes onlyhuman-skill/SKILL.md under the given directory
+// 13. skill init refuses to overwrite an existing onlyhuman-skill/SKILL.md unless --force is passed
+// 14. @Skill in spec.human has no flow line now; --force, create-directory and print-path behaviour are kept from the previous spec as details
+// 15. "fixed in the library" is read as a file shipped in the npm package and located relative to the running code, not a copy embedded in source
+// 16. the target is literally onlyhuman-skill/SKILL.md; existing .onlyhuman/SKILL.md files are left in place and are not migrated
+// 17. consecutive-header applies only to prefix headers (@ ? $ #); comment headers are not counted, and a final header with no child is not flagged unless a separate empty-header rule is added

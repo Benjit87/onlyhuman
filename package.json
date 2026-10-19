@@ -9,7 +9,7 @@
   },
   "files": [
     "dist",
-    "SKILL.md",
+    "onlyhuman-skill/SKILL.md",
     "README.md",
     "LICENSE"
   ],

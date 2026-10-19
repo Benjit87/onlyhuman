@@ -71,9 +71,9 @@ Rules:
 - A line with no `-` is a header and must start with a prefix (`@ $ ? # //`).
 - Indent is 2 spaces. A tab or an odd indent is an error.
 - A `//` is a comment only when it starts a space-separated word. `"//"`, `a//b` and `\//` are plain words.
-- In a `.bot`, a header may end with a pointer to code: `$Token [./src/types.ts][14]`. The path is relative to the nearest folder that holds `.git` or `SKILL.md`.
+- In a `.bot`, a header may end with a pointer to code: `$Token [./src/types.ts][14]`. The path is relative to the nearest folder that holds `.git`; when there is no `.git`, it is relative to the parent of the `spec/` folder.
 
-The full rules, including how the robot behaves, are in [SKILL.md](SKILL.md). The spec for this tool is in [spec/spec.human](spec/spec.human).
+The full rules, including how the robot behaves, are in [onlyhuman-skill/SKILL.md](onlyhuman-skill/SKILL.md). The spec for this tool is in [spec/spec.human](spec/spec.human).
 
 ## Workflow
 
@@ -104,7 +104,7 @@ Initialize a project skill:
 onlyhuman skill init
 ```
 
-This copies the project's `SKILL.md` into `.onlyhuman/SKILL.md`; add `--force` to overwrite an existing file.
+This copies the library's `onlyhuman-skill/SKILL.md` into `<directory>/onlyhuman-skill/SKILL.md`; add `--force` to overwrite an existing file.
 
 Lint a file. This prints `file:line:col severity rule message` and exits 1 on errors:
 
@@ -123,7 +123,7 @@ node src/cli.ts def spec/spec.human:15:2
 - From a definition header in a `.bot`, it jumps to the code line in its `[path][line]`.
 - A reference jumps to its header in the same file.
 
-Lint rules: `no-prefix`, `orphan-child`, `bad-indent`, `indent-jump`, `undefined-reference`, `duplicate-definition`, `dangling-operator` (errors), and `unused-definition`, `missing-robot`, `missing-human`, `broken-pointer` (warnings).
+Lint rules: `no-prefix`, `orphan-child`, `bad-indent`, `indent-jump`, `repeated-bullet`, `consecutive-header`, `undefined-reference`, `duplicate-definition`, `dangling-operator` (errors), and `unused-definition`, `missing-robot`, `missing-human`, `broken-pointer` (warnings).
 
 ### VS Code
 
@@ -143,7 +143,8 @@ code --extensionDevelopmentPath=/path/to/onlyhuman/vscode /path/to/onlyhuman/spe
 | `src/definition.ts` | go-to-definition and `[path][line]` pointers |
 | `src/files.ts` | the only file-system access: sibling file and project root |
 | `src/cli.ts`, `src/lsp/server.ts` | command line and language server |
-| `src/skill.ts` | copies `SKILL.md` into `.onlyhuman/SKILL.md` |
+| `src/skill.ts` | copies `onlyhuman-skill/SKILL.md` into the target project |
+| `onlyhuman-skill/` | the skill shipped with the package |
 | `npm.sh` | build, verify and publish the CLI package |
 | `LICENSE` | MIT license |
 | `vscode/` | editor client and highlighting grammars |
@@ -154,4 +155,4 @@ code --extensionDevelopmentPath=/path/to/onlyhuman/vscode /path/to/onlyhuman/spe
 
 - Go-to-definition covers one file and its sibling only, with no cross-file lookup.
 - The VS Code extension has been run in a development window only, not packaged.
-- The `.bot` extension is a choice made to avoid clashing with Robot Framework's `.robot`. `SKILL.md` still refers to `*.robot` in places.
+- The `.bot` extension is a choice made to avoid clashing with Robot Framework's `.robot`.

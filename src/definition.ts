@@ -54,7 +54,7 @@ function tokenAt(parsed: Parsed, line: number, col: number): Token | undefined {
 }
 
 export interface Pointer {
-  path: string // relative to the folder that holds .onlyhuman
+  path: string // relative to the project root: nearest .git, else the parent of spec/
   line: number // 1-based
   token: Token // the [path][line] word, for diagnostics
 }
