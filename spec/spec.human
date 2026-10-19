@@ -103,7 +103,10 @@ $LSP
 - $Linter
 
 $Skill
-- ./SKILL.md -> copy -> .onlyhuman/SKILL.md // copy file
+- source is the SKILL.md that ships inside the onlyhuman library, fixed in the library, not looked up from the user path
+- copy as is, no generating or editing
+- nothing from the user repo is used
+- target is .onlyhuman/SKILL.md under the user path
 
 $CLI
 - cli def supports both name form and position form

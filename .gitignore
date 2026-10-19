@@ -3,3 +3,5 @@ dist/
 .npm-cache/
 vscode/dist/
 *.vsix
+.DS_Store
+.onlyhuman/

@@ -9,6 +9,7 @@
   },
   "files": [
     "dist",
+    "SKILL.md",
     "README.md",
     "LICENSE"
   ],
