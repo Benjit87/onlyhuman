@@ -6,7 +6,7 @@
 - $Linter, $GoToDefinition and $Highlighter work on *.bot as well as *.human
 
 # version control
-- version: 0.3.0
+- version: 0.4.0
 - update for all modules
   - vscode/package.json
   - package.json

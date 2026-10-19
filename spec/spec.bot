@@ -31,7 +31,7 @@
 - [path][line] numbers are targets and get updated after coding, applies to every header
 
 # version control [./package.json][1]
-- version 0.3.0 is applied to package.json and vscode/package.json
+- version 0.4.0 is applied to package.json and vscode/package.json
   - %vscodeManifest [./vscode/package.json][1] // keep the extension version aligned
 - package-lock.json and vscode/package-lock.json are in sync
 - bump the version before publishing the npm package or the .vsix
@@ -39,7 +39,7 @@
 #vscode deployment [./vscode/package.json][1]
 - package as a .vsix, installed with code --install-extension
   - build: cd vscode, npm run build, then npx vsce package
-  - output: onlyhuman-vscode-<version>.vsix, version is 0.3.0 and is bumped per release
+  - output: onlyhuman-vscode-<version>.vsix, version is 0.4.0 and is bumped per release
   - install: code --install-extension onlyhuman-vscode-<version>.vsix
 - bundle the server and client with esbuild into vscode/dist
   - vscode/dist/server.js // from src/lsp/server.ts, with vscode-languageserver bundled in
@@ -348,7 +348,7 @@ $CLI [./src/cli.ts][21]
 // 9. the CLI bundle uses esbuild and targets Node 20 even though development uses Node 22.18; the source-TypeScript alternative keeps Node >=22.18
 // 10. package name availability is not checked until publish; the current name is onlyhuman and the scoped fallback is "@benjit87/onlyhuman"
 // 11. the npm package exports only the CLI; the parser API remains internal until the human asks for it
-// 12. # version control applies 0.3.0 to package.json, vscode/package.json and both lockfiles
+// 12. # version control applies 0.4.0 to package.json, vscode/package.json and both lockfiles
 // 13. $Skill is exposed as onlyhuman skill init and writes .onlyhuman/SKILL.md under the given directory
 // 14. skill init refuses to overwrite an existing .onlyhuman/SKILL.md unless --force is passed
 // 15. $Skill in spec.human has no flow line now; --force, create-directory and print-path behaviour are kept from the previous spec as details
