@@ -1,9 +1,9 @@
-// $GoToDefinition, plus the symbol collection the linter shares
+// @GoToDefinition, plus the symbol collection the linter shares
 import type { Location, Node, Parsed, Token } from './types.ts'
 import { SYMBOL_PREFIXES } from './types.ts'
 
 export interface SymbolRef {
-  key: string // prefix + name, e.g @Token
+  key: string // prefix + name, e.g $Token
   location: Location // covers prefix + name
   isDefinition: boolean
 }
@@ -54,7 +54,7 @@ function tokenAt(parsed: Parsed, line: number, col: number): Token | undefined {
 }
 
 export interface Pointer {
-  path: string // relative to the folder that holds .onlyhuman
+  path: string // relative to the project root: nearest .git, else the parent of spec/
   line: number // 1-based
   token: Token // the [path][line] word, for diagnostics
 }

@@ -1,4 +1,4 @@
-// $Linter: ?Parsed -> lint -> diagnostics
+// @Linter: ?Parsed -> lint -> diagnostics
 import { collectSymbols, pointerOf } from './definition.ts'
 import type { Diagnostic, Node, Parsed, Severity, Token } from './types.ts'
 import { PREFIXES } from './types.ts'
@@ -44,6 +44,22 @@ export function lint(parsed: Parsed, options: LintOptions = {}): Diagnostic[] {
     }
 
     checkOperators(node, add)
+  }
+
+  let previousPrefixHeader: Token | undefined
+  let childSincePrevious = false
+  for (const node of parsed.nodes) {
+    if (node.kind === 'child') {
+      childSincePrevious = true
+      continue
+    }
+    const token = node.kind === 'header' ? node.token : undefined
+    if (token?.kind !== 'prefix') continue
+    if (previousPrefixHeader && !childSincePrevious) {
+      add('consecutive-header', 'error', previousPrefixHeader, 'header must have at least one child line before the next header')
+    }
+    previousPrefixHeader = token
+    childSincePrevious = false
   }
 
   const symbols = collectSymbols(parsed)
@@ -99,7 +115,7 @@ function checkOperators(
   const ci = node.tokens.findIndex((t) => t.kind === 'comment')
   const toks = ci === -1 ? node.tokens : node.tokens.slice(0, ci)
   const isOperand = (t?: Token) => !!t && t.kind !== 'bullet' && !OPERATORS.includes(t.kind)
-  // an operator alone on its line is a listing of the operator, e.g `- ->` under @Token
+  // an operator alone on its line is a listing of the operator, e.g `- ->` under $Token
   if (toks.filter((t) => t.kind !== 'bullet').length === 1) return
   toks.forEach((t, i) => {
     if (!OPERATORS.includes(t.kind)) return

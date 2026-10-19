@@ -1,4 +1,4 @@
-// @Data -> tokenize -> @Tokens
+// $Data -> tokenize -> $Tokens
 import type { Token, TokenKind, Tokens } from './types.ts'
 
 const PREFIX_RE = /^([@$?#])([A-Za-z0-9_]*)(.*)$/
@@ -14,6 +14,28 @@ export function tokenize(text: string): Tokens {
     let first = true
     const push = (kind: TokenKind, s: string, col: number) =>
       tokens.push({ kind, text: s, line, col, length: s.length, indent })
+    const classify = (s: string, col: number) => {
+      if (s === '->') push('arrow', s, col)
+      else if (s === '+') push('plus', s, col)
+      else if (s === '==') push('equals', s, col)
+      else if (s === '-') push(first ? 'bullet' : 'dash', s, col)
+      else {
+        const m = PREFIX_RE.exec(s)
+        if (m && (m[2] !== '' || m[3] === '')) {
+          push('prefix', m[1], col)
+          if (m[2]) push('word', m[2], col + 1)
+          if (m[3]) push('word', m[3], col + 1 + m[2].length)
+        } else if (PERCENT_RE.test(s)) {
+          const [, name, rest] = PERCENT_RE.exec(s)!
+          push('percent', '%', col)
+          if (name) push('word', name, col + 1)
+          if (rest) push('word', rest, col + 1 + name.length)
+        } else {
+          push('word', s, col)
+        }
+      }
+      first = false
+    }
 
     while (pos < raw.length) {
       if (raw[pos] === ' ' || raw[pos] === '\t') {
@@ -30,26 +52,23 @@ export function tokenize(text: string): Tokens {
         if (rest) push('comment_sentence', rest, raw.indexOf(rest, pos + 2))
         break // comment runs to end of line
       }
-      if (run === '->') push('arrow', run, pos)
-      else if (run === '+') push('plus', run, pos)
-      else if (run === '==') push('equals', run, pos)
-      else if (run === '-') push(first ? 'bullet' : 'dash', run, pos)
-      else {
-        const m = PREFIX_RE.exec(run)
-        if (m && (m[2] !== '' || m[3] === '')) {
-          push('prefix', m[1], pos)
-          if (m[2]) push('word', m[2], pos + 1)
-          if (m[3]) push('word', m[3], pos + 1 + m[2].length)
-        } else if (PERCENT_RE.test(run)) {
-          const [, name, rest] = PERCENT_RE.exec(run)!
-          push('percent', '%', pos)
-          if (name) push('word', name, pos + 1)
-          if (rest) push('word', rest, pos + 1 + name.length)
-        } else {
-          push('word', run, pos)
+      const quoted = run[0] === '"' || run[0] === "'"
+      if (!quoted && (run.includes('(') || run.includes(')'))) {
+        let offset = 0
+        while (offset < run.length) {
+          const ch = run[offset]
+          if (ch === '(' || ch === ')') {
+            push('word', ch, pos + offset)
+            first = false
+            offset++
+            continue
+          }
+          let next = offset
+          while (next < run.length && run[next] !== '(' && run[next] !== ')') next++
+          classify(run.slice(offset, next), pos + offset)
+          offset = next
         }
-      }
-      first = false
+      } else classify(run, pos)
       pos = end
     }
   })

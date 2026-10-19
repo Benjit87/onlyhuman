@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// $CLI: onlyhuman lint <file> | onlyhuman def <name> <file> | onlyhuman def <file>:<line>:<col> | onlyhuman skill init
+// @CLI: onlyhuman lint <file> | onlyhuman def <name> <file> | onlyhuman def <file>:<line>:<col> | onlyhuman skill init
 import { readFileSync } from 'node:fs'
 import { relative } from 'node:path'
 import { definitionAt, findDefinition, pointerAt } from './definition.ts'
@@ -10,9 +10,9 @@ import { initSkill } from './skill.ts'
 
 const USAGE = `usage:
   onlyhuman lint <file>             *.human or *.bot
-  onlyhuman def <name> <file>        e.g. onlyhuman def @Token spec.human
+  onlyhuman def <name> <file>        e.g. onlyhuman def '$Token' spec.human
   onlyhuman def <file>:<line>:<col>  1-based line and col
-  onlyhuman skill init [directory] [--force]  write .onlyhuman/SKILL.md`
+  onlyhuman skill init [directory] [--force]  write onlyhuman-skill/SKILL.md`
 
 function load(file: string) {
   return parseText(readFileSync(file, 'utf8'))

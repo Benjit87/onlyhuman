@@ -1,4 +1,4 @@
-// $LSP: stdio language server for *.human and *.bot. Needs vscode-languageserver (see package.json).
+// @LSP: stdio language server for *.human and *.bot. Needs vscode-languageserver (see package.json).
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import {
   createConnection,
