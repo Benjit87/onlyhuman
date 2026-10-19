@@ -5,7 +5,7 @@
 - @Linter, @GoToDefinition and @Highlighter work on *.bot as well as *.human
 
 # version control
-- version: 0.4.0
+- version: 0.5.0
 - update for all modules
   - vscode/package.json
   - package.json
@@ -74,6 +74,7 @@ $Tokens
 - on a definition header of $,@,?,# go to the same header in the *.bot
 - for % in *.bot it means go to the code file and line
 - if no *.bot or header, stay on the definition
+- parethnesis like () is ignored ( e.g '(?Parser)' ) the go to definition sould work
 
 @Highlighter
 - provide relevant method signatures with some explaination

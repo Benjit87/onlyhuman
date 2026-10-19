@@ -132,6 +132,9 @@ $Token [./src/types.ts][15]
 - prefixes are $ @ ? and #
   - prefix token, followed by word as its name when attached e.g $Token = $ + word(Token)
   - alone is valid e.g `- $` inside $Token
+  - parentheses adjacent to a prefix are punctuation, not part of the name
+    - `(@Parser)` tokenizes as `(`, `@Parser`, `)`, so the symbol stays visible to go-to-definition and linting
+    - a run that starts with a quote stays one word, so `'(?Parsed)'` remains a quoted example rather than a symbol reference
 - comment marker // is a double slash
   - starts a comment, rest of line is one comment_sentence token
 - operators are arrow // ->
@@ -232,6 +235,7 @@ $Node [./src/types.ts][28]
   - %pointerOf(node: Node): Pointer | undefined [./src/definition.ts][69] // find the first pointer in a header or % child line
 - found: returns line, col, length of the defining header
 - not found, or token is not an $ ? @ reference or an eligible header: returns none
+- parentheses around a prefixed symbol do not block navigation, e.g `(@Parser)` and `(?Parsed)` resolve on the symbol
 - duplicates: first definition wins, @Linter reports the rest
 - cursor in a comment returns none
 - scope is one *.human file plus its sibling *.bot, no other files
@@ -355,3 +359,5 @@ $Node [./src/types.ts][28]
 // 15. "fixed in the library" is read as a file shipped in the npm package and located relative to the running code, not a copy embedded in source
 // 16. the target is literally onlyhuman-skill/SKILL.md; existing .onlyhuman/SKILL.md files are left in place and are not migrated
 // 17. consecutive-header applies only to prefix headers (@ ? $ #); comment headers are not counted, and a final header with no child is not flagged unless a separate empty-header rule is added
+// 18. the example '(?Parser)' is read as a state name; ?Parser is undefined in this spec, so the example covers recognition inside parentheses, not a successful lookup
+// 19. only parentheses are treated as ignored punctuation; other punctuation such as commas remains a separate word

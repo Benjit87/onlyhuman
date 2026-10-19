@@ -22,6 +22,16 @@ test('tokenizer: prefix + name, operators, bullet vs dash, comment', () => {
   assert.deepEqual(kinds('- *.human file'), ['bullet:-', 'word:*.human', 'word:file'])
 })
 
+test('tokenizer: parentheses are ignored around symbols and operators', () => {
+  assert.deepEqual(kinds('(@Parser)'), ['word:(', 'prefix:@', 'word:Parser', 'word:)'])
+  assert.deepEqual(kinds('(?Parsed, position)'), [
+    'word:(', 'prefix:?', 'word:Parsed', 'word:,', 'word:position', 'word:)',
+  ])
+  assert.deepEqual(kinds('(->)'), ['word:(', 'arrow:->', 'word:)'])
+  assert.deepEqual(kinds('(//)'), ['word:(', 'word://', 'word:)'])
+  assert.deepEqual(kinds("'(?Parser)'"), ["word:'(?Parser)'"])
+})
+
 test('tokenizer: percent is its own token, with or without a name', () => {
   assert.deepEqual(kinds('  - %parse // x'), ['bullet:-', 'percent:%', 'word:parse', 'comment://', 'comment_sentence:x'])
   assert.deepEqual(kinds('- %'), ['bullet:-', 'percent:%'])
@@ -74,6 +84,8 @@ test('linter rules', () => {
   assert.ok(!rules('#1\n- detail\n#2\n').includes('consecutive-header'))
   assert.ok(!rules('// a\n// b\n').includes('consecutive-header'))
   assert.ok(!rules('#1\n').includes('consecutive-header'))
+  assert.deepEqual(rules('?Parsed\n- (?Parsed)\n'), [])
+  assert.ok(rules('?Parsed\n- (?Nope)\n').includes('undefined-reference'))
   assert.ok(rules('$A\n').includes('unused-definition'))
 })
 
@@ -101,6 +113,8 @@ test('go-to-definition', () => {
   assert.deepEqual(definitionAt(p, 1, 0), { line: 1, col: 0, length: 2 }) // itself
   assert.equal(definitionAt(p, 5, 15), undefined) // in comment
   assert.equal(definitionAt(p, 5, 9), undefined) // on a word
+  const paren = parseText('?Parsed\n- (?Parsed) -> x\n')
+  assert.deepEqual(definitionAt(paren, 2, 4), { line: 1, col: 0, length: 7 }) // inside parentheses
 })
 
 test('go-to-definition: definition header jumps to the same header in the robot', () => {
