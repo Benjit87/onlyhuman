@@ -1,4 +1,4 @@
-// @Data -> tokenize -> @Tokens
+// $Data -> tokenize -> $Tokens
 import type { Token, TokenKind, Tokens } from './types.ts'
 
 const PREFIX_RE = /^([@$?#])([A-Za-z0-9_]*)(.*)$/

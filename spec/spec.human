@@ -3,7 +3,7 @@
 - implement a token parser for human.skills
 - implementation is in typescript
 - [path][line] numbers are targets and get updated after coding.
-- $Linter, $GoToDefinition and $Highlighter work on *.bot as well as *.human
+- @Linter, @GoToDefinition and @Highlighter work on *.bot as well as *.human
 
 # version control
 - version: 0.4.0
@@ -23,11 +23,11 @@
 - package for pushing to npm repository
 - provide a bash script for it npm.sh
 
-@Data
+$Data
 - *.human file
 - *.bot file
 
-@Structure
+$Structure
 - each child line starts with exactly one bullet marker
 - nest a child by adding 2 spaces before its bullet marker for each level
 - never show nesting by repeating bullet markers on the same line
@@ -35,9 +35,9 @@
 - a line with only an operator after its bullet marker lists that operator
 - both *.bot and *.human have the same structure
 
-@Token
-- @
+$Token
 - $
+- @
 - ?
 - //
 - #
@@ -50,37 +50,37 @@
 - word // a // inside quotes e.g "//" is a word, not a comment
 - % // attach to the name, e.g %tokenize, no space
 
-@Node
-- @Token // the token of this line
-- children // @Node list, defined by - bullets and indent
+$Node
+- $Token // the token of this line
+- children // $Node list, defined by - bullets and indent
 
-@Tokens
-- @Token // list
+$Tokens
+- $Token // list
 
 ?Data
-- @Data
+- $Data
 
 ?Parsed
-- AST of @Node // tree of nodes, one per line
+- AST of $Node // tree of nodes, one per line
 
-$Parser
+@Parser
 - provide relevant method signatures
-- @Data -> tokenize -> @Tokens
-- @Tokens + @Structure -> parser -> ?Parsed
+- $Data -> tokenize -> $Tokens
+- $Tokens + $Structure -> parser -> ?Parsed
 
-$GoToDefinition
+@GoToDefinition
 - provide relevant method signatures with some explaination
 - single .human file plus its sibling *.bot only
-- on a definition header of @,$,?,# go to the same header in the *.bot
+- on a definition header of $,@,?,# go to the same header in the *.bot
 - for % in *.bot it means go to the code file and line
 - if no *.bot or header, stay on the definition
 
-$Highlighter
+@Highlighter
 - provide relevant method signatures with some explaination
 - each token type gets its own color
-- @Token -> colour -> editor
-- @
+- $Token -> colour -> editor
 - $
+- @
 - ?
 - #
 - "//"
@@ -90,7 +90,7 @@ $Highlighter
 - -
 - %
 
-$Linter
+@Linter
 - provide relevant method signatures with some explaination
 - unused-definition is a warning
 - missing-robot only checked when file info is passed
@@ -98,18 +98,18 @@ $Linter
 - [path] is relative to the folder that holds .git or the parent of spec folder
 - missing-human, same as missing-robot, for *.bot
 
-$LSP
-- $GoToDefinition
-- $Linter
+@LSP
+- @GoToDefinition
+- @Linter
 
-$Skill
+@Skill
 - source is the SKILL.md that ships inside the onlyhuman library, fixed in the library, not looked up from the user path
 - copy as is, no generating or editing
 - nothing from the user repo is used
 - target is .onlyhuman/SKILL.md under the user path
 
-$CLI
+@CLI
 - cli def supports both name form and position form
-- $GoToDefinition
-- $Linter
-- $Skill
+- @GoToDefinition
+- @Linter
+- @Skill

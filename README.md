@@ -29,7 +29,7 @@ In most languages the compiler fixes both the grammar and the meaning. Here the 
 
 | Fixed by the syntax | Decided by the reader |
 |---|---|
-| `@` entity, `?` state, `$` service | what that entity, state or service is in the product |
+| `@` service, `?` state, `$` entity | what that entity, state or service is in the product |
 | a leading `-` makes a child, indent is 2 spaces | whether a child is an attribute, a step or a part |
 | `->` flow, `+` combine | what the flow or combination does |
 | `==` | equal semantically or literally, the robot decides |
@@ -39,16 +39,16 @@ In most languages the compiler fixes both the grammar and the meaning. Here the 
 Example:
 
 ```
-$Parser
-- @Data -> tokenize -> @Tokens
+@Parser
+- $Data -> tokenize -> $Tokens
 ```
 
-The tools know `$Parser` is a service, `@Data` and `@Tokens` are entities, and `->` is a flow. They do not know what `tokenize` means. The robot reads it as a behaviour and works out what it should do. A line such as `- define for me` is a valid spec line for the same reason: it is a sentence, and the robot fills it in.
+The tools know `@Parser` is a service, `$Data` and `$Tokens` are entities, and `->` is a flow. They do not know what `tokenize` means. The robot reads it as a behaviour and works out what it should do. A line such as `- define for me` is a valid spec line for the same reason: it is a sentence, and the robot fills it in.
 
 ### What this costs
 
 - Two readers can understand a line differently, so the result is not guaranteed to be the same every time.
-- The linter catches structural mistakes, such as an undefined `@Name`. It cannot tell you that a line means the wrong thing.
+- The linter catches structural mistakes, such as an undefined `$Name`. It cannot tell you that a line means the wrong thing.
 
 Two rules keep this under control. The robot must ask you when a line is ambiguous or wrong, and you review `spec.bot` before any implementation starts.
 
@@ -56,9 +56,9 @@ Two rules keep this under control. The robot must ask you when a line is ambiguo
 
 | Syntax | Meaning |
 |---|---|
-| `@Name` | entity |
+| `@Name` | service |
 | `?Name` | state |
-| `$Name` | service |
+| `$Name` | entity |
 | `#text` | requirement statement |
 | `// text` | comment, from `//` to the end of the line; a note or an instruction |
 | `-` | starts a child of the previous header, any depth |
@@ -71,7 +71,7 @@ Rules:
 - A line with no `-` is a header and must start with a prefix (`@ $ ? # //`).
 - Indent is 2 spaces. A tab or an odd indent is an error.
 - A `//` is a comment only when it starts a space-separated word. `"//"`, `a//b` and `\//` are plain words.
-- In a `.bot`, a header may end with a pointer to code: `@Token [./src/types.ts][14]`. The path is relative to the nearest folder that holds `.git` or `SKILL.md`.
+- In a `.bot`, a header may end with a pointer to code: `$Token [./src/types.ts][14]`. The path is relative to the nearest folder that holds `.git` or `SKILL.md`.
 
 The full rules, including how the robot behaves, are in [SKILL.md](SKILL.md). The spec for this tool is in [spec/spec.human](spec/spec.human).
 
@@ -115,7 +115,7 @@ node src/cli.ts lint spec/spec.human
 Find a definition, by name or by cursor position (1-based line and column):
 
 ```bash
-node src/cli.ts def @Token spec/spec.human
+node src/cli.ts def '$Token' spec/spec.human
 node src/cli.ts def spec/spec.human:15:2
 ```
 

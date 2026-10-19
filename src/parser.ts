@@ -1,4 +1,4 @@
-// @Tokens + @Structure -> parser -> ?Parsed. Never throws.
+// $Tokens + $Structure -> parser -> ?Parsed. Never throws.
 import { tokenize } from './tokenizer.ts'
 import type { Node, Parsed, Token, Tokens } from './types.ts'
 

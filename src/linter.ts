@@ -1,4 +1,4 @@
-// $Linter: ?Parsed -> lint -> diagnostics
+// @Linter: ?Parsed -> lint -> diagnostics
 import { collectSymbols, pointerOf } from './definition.ts'
 import type { Diagnostic, Node, Parsed, Severity, Token } from './types.ts'
 import { PREFIXES } from './types.ts'
@@ -99,7 +99,7 @@ function checkOperators(
   const ci = node.tokens.findIndex((t) => t.kind === 'comment')
   const toks = ci === -1 ? node.tokens : node.tokens.slice(0, ci)
   const isOperand = (t?: Token) => !!t && t.kind !== 'bullet' && !OPERATORS.includes(t.kind)
-  // an operator alone on its line is a listing of the operator, e.g `- ->` under @Token
+  // an operator alone on its line is a listing of the operator, e.g `- ->` under $Token
   if (toks.filter((t) => t.kind !== 'bullet').length === 1) return
   toks.forEach((t, i) => {
     if (!OPERATORS.includes(t.kind)) return

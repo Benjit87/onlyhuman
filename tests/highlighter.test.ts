@@ -58,14 +58,14 @@ test('grammar json is well formed and every regex compiles', () => {
 })
 
 test('scopes per token', () => {
-  assert.deepEqual(scopes('@Token'), ['entity.name.type:@Token'])
+  assert.deepEqual(scopes('$Token'), ['entity.name.type:$Token'])
   assert.deepEqual(scopes('?Data'), ['variable.other.constant:?Data'])
-  assert.deepEqual(scopes('$Parser'), ['entity.name.function:$Parser'])
+  assert.deepEqual(scopes('@Parser'), ['entity.name.function:@Parser'])
   assert.deepEqual(scopes('#implementation'), ['markup.heading:#implementation'])
   assert.deepEqual(scopes('#req // note'), ['markup.heading:#req ', 'comment.line.double-slash:// note'])
-  assert.deepEqual(scopes('- @A -> x + ?B == y'), [
+  assert.deepEqual(scopes('- $A -> x + ?B == y'), [
     'punctuation.definition.list.begin:-',
-    'entity.name.type:@A',
+    'entity.name.type:$A',
     'keyword.operator.arrow:->',
     'string.unquoted.word:x',
     'keyword.operator.plus:+',

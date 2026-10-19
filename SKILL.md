@@ -18,9 +18,9 @@ description: "Write and maintain onlyhuman specs, a descriptive language where t
 - say approve to implement the spec
 
 # .human definition
-- @ prefix = entity
+- @ prefix = service
 - ? prefix = state
-- $ prefix = service
+- $ prefix = entity
 - "//" prefix = user comment, can be a note or an instruction
 - # prefix = user requirement statement
 - "->" = logic flow
@@ -32,7 +32,7 @@ description: "Write and maintain onlyhuman specs, a descriptive language where t
 - a single word that does not have prefix or quotes is a behavioural functionality or attributes name
 - to write a double slash as a plain word, quote it e.g "//"
 - a line that is only one operator is a listing, not an expression
-- a placeholder like "@Name" is quoted so it is not read as a symbol
+- a placeholder like "$Name" is quoted so it is not read as a symbol
 
 # .bot definition
 - % prefix = allowed in child to represent method or additional details

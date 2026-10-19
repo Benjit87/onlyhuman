@@ -28,7 +28,7 @@
     },
     "entity": {
       "name": "entity.name.type.human",
-      "match": "(?<![\\w@$?#])@\\w+"
+      "match": "(?<![\\w@$?#])\\$\\w+"
     },
     "state": {
       "name": "variable.other.constant.human",
@@ -36,7 +36,7 @@
     },
     "service": {
       "name": "entity.name.function.human",
-      "match": "(?<![\\w@$?#])\\$\\w+"
+      "match": "(?<![\\w@$?#])@\\w+"
     },
     "bare-prefix": {
       "name": "punctuation.definition.prefix.human",

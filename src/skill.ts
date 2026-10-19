@@ -1,4 +1,4 @@
-// $Skill: library SKILL.md -> copy -> .onlyhuman/SKILL.md
+// @Skill: library SKILL.md -> copy -> .onlyhuman/SKILL.md
 import { copyFileSync, existsSync, mkdirSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'

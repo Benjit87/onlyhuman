@@ -1,9 +1,9 @@
-// $GoToDefinition, plus the symbol collection the linter shares
+// @GoToDefinition, plus the symbol collection the linter shares
 import type { Location, Node, Parsed, Token } from './types.ts'
 import { SYMBOL_PREFIXES } from './types.ts'
 
 export interface SymbolRef {
-  key: string // prefix + name, e.g @Token
+  key: string // prefix + name, e.g $Token
   location: Location // covers prefix + name
   isDefinition: boolean
 }

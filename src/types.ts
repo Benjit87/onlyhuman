@@ -1,4 +1,4 @@
-// @Token @Tokens @Node @Data types. Erasable syntax only (runs under node type stripping).
+// $Token $Tokens $Node $Data types. Erasable syntax only (runs under node type stripping).
 
 export type TokenKind =
   | 'prefix' // @ $ ? #

@@ -4,25 +4,25 @@
 #implementation [./package.json][1]
 - implement a token parser for the human spec language; "human.skills" refers to the onlyhuman skill's *.human and *.bot files
 - language is TypeScript, development requires Node >= 22.18, strict mode
-- parser, linter and definition core are pure functions, no editor or fs dependency; $LSP and $CLI share them
-- $Linter, $GoToDefinition and $Highlighter work on *.bot as well as *.human
+- parser, linter and definition core are pure functions, no editor or fs dependency; @LSP and @CLI share them
+- @Linter, @GoToDefinition and @Highlighter work on *.bot as well as *.human
 - layout
-  - src/types.ts // @Token @Node @Tokens types
-  - src/tokenizer.ts // @Data -> @Tokens
-  - src/parser.ts // @Tokens + @Structure -> parser -> ?Parsed
-  - src/linter.ts // $Linter
-  - src/definition.ts // $GoToDefinition
-  - src/files.ts // fs access for sibling files, project root and pointers, used by $CLI and $LSP
-  - src/lsp/server.ts // $LSP
-  - src/cli.ts // $CLI
-  - src/skill.ts // $Skill copy operation
+  - src/types.ts // $Token $Node $Tokens types
+  - src/tokenizer.ts // $Data -> $Tokens
+  - src/parser.ts // $Tokens + $Structure -> parser -> ?Parsed
+  - src/linter.ts // @Linter
+  - src/definition.ts // @GoToDefinition
+  - src/files.ts // fs access for sibling files, project root and pointers, used by @CLI and @LSP
+  - src/lsp/server.ts // @LSP
+  - src/cli.ts // @CLI
+  - src/skill.ts // @Skill copy operation
   - SKILL.md // Codex skill instructions and tooling
   - dist/cli.js // bundled CLI published to npm
   - npm.sh // build, verify and publish the CLI
   - vscode/ // thin client, starts the lsp for *.human and *.bot
   - vscode/dist/ // bundled output of esbuild, what the .vsix ships
   - vscode/install-local.sh // bash script to build, package and install the extension locally
-  - vscode/syntaxes/human.tmLanguage.json // $Highlighter grammar for *.human
+  - vscode/syntaxes/human.tmLanguage.json // @Highlighter grammar for *.human
   - vscode/syntaxes/robot.tmLanguage.json // same grammar for *.bot, language id onlyhuman-robot
   - tests/ // unit tests on the pure functions
   - README.md // project documentation and npm package page
@@ -101,7 +101,7 @@
   - whether to publish the parser API as imports, not just the CLI
   - the minimum Node version for CLI users
 
-@Data [./src/types.ts][1]
+$Data [./src/types.ts][1]
 - *.human file, utf-8, lf or crlf
 - *.bot file, same syntax as *.human, so the same tokenizer and parser read both
 - processed line by line, blank lines are skipped
@@ -109,10 +109,10 @@
   - header // no leading -, starts with a prefix
   - child // starts with - after optional indent
   - blank
-- in a *.bot a header may end with a pointer, e.g `@Token [./src/types.ts][15]`
+- in a *.bot a header may end with a pointer, e.g `$Token [./src/types.ts][15]`
   - the pointer is two words glued together, [path][line], so it needs no new token
 
-@Structure [./src/parser.ts][6]
+$Structure [./src/parser.ts][6]
 - each child line starts with exactly one bullet marker
 - each deeper child adds 2 spaces before its bullet marker
 - nesting is represented by indentation, never by repeated bullet markers on one line
@@ -126,11 +126,11 @@
 - a listed dash is the child marker followed by a dash token and an optional comment
 - *.human and *.bot use the same child and indentation rules
 
-@Token [./src/types.ts][15]
+$Token [./src/types.ts][15]
 - every token has kind, text, line, col, length // 1-based line, 0-based col
-- prefixes are @ $ ? and #
-  - prefix token, followed by word as its name when attached e.g @Token = @ + word(Token)
-  - alone is valid e.g `- @` inside @Token
+- prefixes are $ @ ? and #
+  - prefix token, followed by word as its name when attached e.g $Token = $ + word(Token)
+  - alone is valid e.g `- $` inside $Token
 - comment marker // is a double slash
   - starts a comment, rest of line is one comment_sentence token
 - operators are arrow // ->
@@ -148,49 +148,49 @@
     - `"//"`, `a//b` and `\//` are words, not comments, so the line goes on
     - quotes are not special, `"// x"` is two words `"//` and `x"`, any character before // does it
     - the highlighter follows the same rule, a // after a non-space character is not a comment
-    - to write a literal name or operator in a *.bot without lint treating it as a symbol, quote it, e.g `"@Name"` or `"->"`
+    - to write a literal name or operator in a *.bot without lint treating it as a symbol, quote it, e.g `"$Name"` or `"->"`
   - meaning is read by the robot, code only tokenizes it
 - comment_sentence // the words after //, this represent instructions or remarks
   - kept as one raw string, never tokenized further, never a reference
   - instructions for the robot when generating, ignored by lint and go-to-definition
 
-@Tokens [./src/types.ts][24]
-- @Token // list, in source order, line breaks kept via line number
+$Tokens [./src/types.ts][24]
+- $Token // list, in source order, line breaks kept via line number
 
-@Node [./src/types.ts][28]
-- @Token // the token of this line, first token after bullet
-- tokens // all @Token of the line, in order
+$Node [./src/types.ts][28]
+- $Token // the token of this line, first token after bullet
+- tokens // all $Token of the line, in order
 - depth
-- children // @Node list, defined by - bullets and indent
+- children // $Node list, defined by - bullets and indent
 - kind // header | child
 
 ?Data [./src/tokenizer.ts][7]
-- @Data
+- $Data
 
 ?Parsed [./src/types.ts][39]
-- AST of @Node // tree of nodes, one per line
-- roots = header nodes, children nest by @Structure
-- a child with no header above it is kept at root and flagged by $Linter
+- AST of $Node // tree of nodes, one per line
+- roots = header nodes, children nest by $Structure
+- a child with no header above it is kept at root and flagged by @Linter
 - parse never throws, bad input still yields a tree
 
-$Parser [./src/parser.ts][16]
-- @Data -> tokenize -> @Tokens
-- @Tokens + @Structure -> parser -> ?Parsed
-- tokenize(text) returns @Tokens
+@Parser [./src/parser.ts][16]
+- $Data -> tokenize -> $Tokens
+- $Tokens + $Structure -> parser -> ?Parsed
+- tokenize(text) returns $Tokens
 - parse(tokens) returns ?Parsed
 - method signatures
   - %tokenize(text: string): Tokens [./src/tokenizer.ts][7]
   - %parse(tokens: Tokens): Parsed [./src/parser.ts][16]
   - %parseText(text: string): Parsed [./src/parser.ts][53] // tokenize + parse in one call
 
-$Linter [./src/linter.ts][19]
+@Linter [./src/linter.ts][19]
 - ?Parsed -> lint -> diagnostics
 - method signatures
   - %lint(parsed: Parsed, options: LintOptions = {}): Diagnostic[] [./src/linter.ts][19] // pure: parse tree + optional file info -> diagnostics, sorted by line then col
   - %LintOptions [./src/linter.ts][6] // optional file info enables missing-robot, missing-human and broken-pointer
 - diagnostic = rule, severity, line, col, length, message
-- definition = a header whose first token is @ ? or $ plus a name
-- reference = @ ? or $ plus a name anywhere outside a comment, names are case-sensitive and per prefix, so @Data != ?Data
+- definition = a header whose first token is $ ? or @ plus a name
+- reference = $ ? or @ plus a name anywhere outside a comment, names are case-sensitive and per prefix, so $Data != ?Data
 - the same rules run on *.human and *.bot
 - file info, when the caller has it = path, whether the sibling exists, and a way to count lines of a pointed file, so the linter itself stays free of fs
 - rules
@@ -199,7 +199,7 @@ $Linter [./src/linter.ts][19]
   - bad-indent // error: tab, or leading spaces not a multiple of 2
   - indent-jump // error: child deeper than parent depth + 1
   - repeated-bullet // error: a dash token followed by other content after the child marker; use indentation for nesting
-  - undefined-reference // error: reference with no definition e.g @Nodee
+  - undefined-reference // error: reference with no definition e.g $Nodee
   - duplicate-definition // error: same prefix + name defined twice, reported on the second
   - dangling-operator // error: an operator missing a left or right operand
   - unused-definition // warning: defined but never referenced
@@ -210,35 +210,35 @@ $Linter [./src/linter.ts][19]
     - when no .git is found, [path] is relative to the parent of the spec/ folder
     - only checked when the caller passes file info
 - not flagged
-  - a bare @ $ ? with no name e.g `- @` in @Token
+  - a bare $ @ ? with no name e.g `- $` in $Token
   - bare words e.g tokenize, they are behaviour names
   - # lines, they are requirement statements, not definitions
   - anything inside a comment_sentence
-  - a line that is only one operator, e.g under @Token, it is a listing
-  - quoted text like `"@Name"`, it is a word
+  - a line that is only one operator, e.g under $Token, it is a listing
+  - quoted text like `"$Name"`, it is a word
 
-$GoToDefinition [./src/definition.ts][90]
+@GoToDefinition [./src/definition.ts][90]
 - (?Parsed, position) -> find token -> definition location
 - (?Parsed, name) -> definition location
-- name = prefix + name, e.g @Token
+- name = prefix + name, e.g $Token
 - method signatures
-  - %collectSymbols(parsed: Parsed): SymbolRef[] [./src/definition.ts][11] // shared definition and reference scan, also used by $Linter
+  - %collectSymbols(parsed: Parsed): SymbolRef[] [./src/definition.ts][11] // shared definition and reference scan, also used by @Linter
   - %findDefinition(parsed: Parsed, key: string): Location | undefined [./src/definition.ts][29] // by name, key = prefix + name
   - %definitionAt(parsed: Parsed, line: number, col: number, robot?: Parsed): Location | undefined [./src/definition.ts][90] // by position
   - %pointerAt(parsed: Parsed, line: number, col: number): Pointer | undefined [./src/definition.ts][112] // in a *.bot, header or % line to its [path][line]
   - %parsePointer(token: Token): Pointer | undefined [./src/definition.ts][63] // parse the glued [path][line] word without reading the file
   - %pointerOf(node: Node): Pointer | undefined [./src/definition.ts][69] // find the first pointer in a header or % child line
 - found: returns line, col, length of the defining header
-- not found, or token is not an @ ? $ reference or an eligible header: returns none
-- duplicates: first definition wins, $Linter reports the rest
+- not found, or token is not an $ ? @ reference or an eligible header: returns none
+- duplicates: first definition wins, @Linter reports the rest
 - cursor in a comment returns none
 - scope is one *.human file plus its sibling *.bot, no other files
 - in a *.human
   - a reference goes to its .human header
-  - cursor on a definition header of @ $ ? or # goes to the matching header in x.bot
+  - cursor on a definition header of $ @ ? or # goes to the matching header in x.bot
   - # headers match by their full requirement text after #, excluding a trailing [path][line] pointer in x.bot
-  - the robot header is found by parsing x.bot with the same $Parser, trailing [path][line] on the header is ignored
-  - found: location carries the robot file, so $LSP and $CLI can open another file
+  - the robot header is found by parsing x.bot with the same @Parser, trailing [path][line] on the header is ignored
+  - found: location carries the robot file, so @LSP and @CLI can open another file
   - no x.bot, or no such header in it: stays on the .human definition
   - // comment headers have no robot target
 - in a *.bot
@@ -249,17 +249,17 @@ $GoToDefinition [./src/definition.ts][90]
   - no pointer, or the file is missing: stays on the .bot header
 - the caller passes the parsed robot, the function does no file reading
 
-$Highlighter [./vscode/syntaxes/human.tmLanguage.json][1]
-- @Token -> colour -> editor
+@Highlighter [./vscode/syntaxes/human.tmLanguage.json][1]
+- $Token -> colour -> editor
 - a textmate grammar registered under contributes.grammars in vscode/package.json
 - *.bot gets the same grammar through its own language id
-- lexical only, no server needed, so it does not depend on $LSP or $CLI
+- lexical only, no server needed, so it does not depend on @LSP or @CLI
 - method signatures // the highlighter is declarative; these are its grammar rules, one per token class
   - %comment [./vscode/syntaxes/human.tmLanguage.json][20] // comment.line.double-slash.human, // to end of line
   - %requirement [./vscode/syntaxes/human.tmLanguage.json][24] // markup.heading.human, # to end of line or comment
-  - %entity [./vscode/syntaxes/human.tmLanguage.json][29] // entity.name.type.human, @name
+  - %entity [./vscode/syntaxes/human.tmLanguage.json][29] // entity.name.type.human, $name
   - %state [./vscode/syntaxes/human.tmLanguage.json][33] // variable.other.constant.human, ?name
-  - %service [./vscode/syntaxes/human.tmLanguage.json][37] // entity.name.function.human, $name
+  - %service [./vscode/syntaxes/human.tmLanguage.json][37] // entity.name.function.human, @name
   - %bare-prefix [./vscode/syntaxes/human.tmLanguage.json][41] // punctuation.definition.prefix.human, a prefix alone
   - %arrow [./vscode/syntaxes/human.tmLanguage.json][45] // keyword.operator.arrow.human
   - %plus [./vscode/syntaxes/human.tmLanguage.json][49] // keyword.operator.plus.human
@@ -269,9 +269,9 @@ $Highlighter [./vscode/syntaxes/human.tmLanguage.json][1]
   - %word [./vscode/syntaxes/human.tmLanguage.json][65] // string.unquoted.word.human
   - %percent [./vscode/syntaxes/robot.tmLanguage.json][10] // keyword.operator.percent.human, only in *.bot
 - each token type gets its own highlighting scope; the editor theme picks the actual colour
-  - the @ name // entity.name.type
+  - the $ name // entity.name.type
   - the ? name // variable.other.constant
-  - the $ name // entity.name.function
+  - the @ name // entity.name.function
   - a # line // markup.heading, whole line
   - the comment marker and comment_sentence // comment.line, from the marker to end of line, nothing inside is coloured
   - arrow, plus and equals // distinct keyword.operator scopes
@@ -281,18 +281,18 @@ $Highlighter [./vscode/syntaxes/human.tmLanguage.json][1]
   - comment_sentence // comment scope, shared with the comment marker because the entire comment is highlighted together
 - a bare prefix with no name gets the punctuation scope of its prefix
 - prefix colour covers prefix + name together, so references and definitions look the same
-- semantic highlighting (undefined names in a different colour) is not part of this, it would be a later step in $LSP
+- semantic highlighting (undefined names in a different colour) is not part of this, it would be a later step in @LSP
 
-$LSP [./src/lsp/server.ts][19]
-- $GoToDefinition
-- $Linter
+@LSP [./src/lsp/server.ts][19]
+- @GoToDefinition
+- @Linter
 - transport ipc or stdio, library vscode-languageserver, full text sync
 - on open and on change: parse, lint, textDocument/publishDiagnostics
-- textDocument/definition -> $GoToDefinition
+- textDocument/definition -> @GoToDefinition
 - positions 0-based, per the lsp protocol
 - vscode client in ./vscode starts the server for files *.human, and *.bot
 
-$Skill [./src/skill.ts][1]
+@Skill [./src/skill.ts][1]
 - source is the SKILL.md that ships inside the onlyhuman library, fixed in the library, not looked up from the user path
   - %init(directory: string = ".", options?: InitSkillOptions): string [./src/skill.ts][13] // copy the library SKILL.md into <directory>/.onlyhuman/SKILL.md, return the target path
   - the source path is resolved from the library's own location, e.g. import.meta.url, never from <directory> or the current directory
@@ -311,10 +311,10 @@ $Skill [./src/skill.ts][1]
   - onlyhuman lint validates .human and .bot specs, not Markdown
 - tests assert the copied file matches the library SKILL.md and ignores a different SKILL.md in the user project
 
-$CLI [./src/cli.ts][21]
-- $GoToDefinition
-- $Linter
-- $Skill
+@CLI [./src/cli.ts][21]
+- @GoToDefinition
+- @Linter
+- @Skill
 - onlyhuman skill init
   - %skillInit [./src/cli.ts][24] // parse the command and call initSkill
   - copy the library SKILL.md as is to .onlyhuman/SKILL.md under the given directory
@@ -334,13 +334,13 @@ $CLI [./src/cli.ts][21]
 - positions 1-based in the cli output
 - def supports both name form and position form
 - the cli passes file info, so missing-robot, missing-human and broken-pointer are checked on lint
-- $LSP passes file info too when the file is on disk
+- @LSP passes file info too when the file is on disk
 
 // assumptions, open points in spec.human, change spec.human if wrong
 // 1. "human.skills" in #implementation is read as the onlyhuman skill's *.human and *.bot language; change line 3 if it means another skill
-// 2. $GoToDefinition, $Highlighter and $Linter list their public method or grammar-rule signatures with brief explanations; private helpers are omitted
-// 3. $Highlighter has no executable methods, so its method signatures are the TextMate grammar rules and scopes; if you expect functions there, say so
-// 4. $Highlighter "each token type gets its own color" means a distinct TextMate scope per token type; the editor theme maps scopes to actual colors
+// 2. @GoToDefinition, @Highlighter and @Linter list their public method or grammar-rule signatures with brief explanations; private helpers are omitted
+// 3. @Highlighter has no executable methods, so its method signatures are the TextMate grammar rules and scopes; if you expect functions there, say so
+// 4. @Highlighter "each token type gets its own color" means a distinct TextMate scope per token type; the editor theme maps scopes to actual colors
 // 5. "published to the marketplace" is a release requirement; the robot prepares and verifies the .vsix and asks before publishing, because publishing is a public, human-authorized step
 // 6. development uses Node >= 22.18; the bundled server targets the Node runtime shipped with VS Code, and esbuild targets node18
 // 7. in a *.bot, go-to-definition on a header or % line goes to its code pointer, not back to the .human header; the .human definition remains the source of intent
@@ -349,7 +349,7 @@ $CLI [./src/cli.ts][21]
 // 10. package name availability is not checked until publish; the current name is onlyhuman and the scoped fallback is "@benjit87/onlyhuman"
 // 11. the npm package exports only the CLI; the parser API remains internal until the human asks for it
 // 12. # version control applies 0.4.0 to package.json, vscode/package.json and both lockfiles
-// 13. $Skill is exposed as onlyhuman skill init and writes .onlyhuman/SKILL.md under the given directory
+// 13. @Skill is exposed as onlyhuman skill init and writes .onlyhuman/SKILL.md under the given directory
 // 14. skill init refuses to overwrite an existing .onlyhuman/SKILL.md unless --force is passed
-// 15. $Skill in spec.human has no flow line now; --force, create-directory and print-path behaviour are kept from the previous spec as details
+// 15. @Skill in spec.human has no flow line now; --force, create-directory and print-path behaviour are kept from the previous spec as details
 // 16. "fixed in the library" is read as a file shipped in the npm package and located relative to the running code, not a copy embedded in source
