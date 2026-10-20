@@ -1,16 +1,18 @@
 // @Linter: ?Parsed -> lint -> diagnostics
-import { collectSymbols, pointerOf } from './definition.ts'
+import { collectSymbols, importsOf, pointerOf } from './definition.ts'
 import type { Diagnostic, Node, Parsed, Severity, Token } from './types.ts'
 import { PREFIXES } from './types.ts'
 
 export interface LintOptions {
-  // pass when the file is on disk: enables missing-robot, missing-human and broken-pointer
+  // pass when the file is on disk: enables missing-robot, missing-human, broken-pointer and unresolved-import
   file?: {
     path: string
     siblingExists: boolean // x.human <-> x.bot
     // line count of the file a [path] points to, undefined if it is missing.
     // leave out when there is no project root, broken-pointer is then skipped
     lineCount?: (pointerPath: string) => number | undefined
+    // parsed spec an import line names, undefined if it is missing. Only that spec, its own imports are not followed.
+    resolveImport?: (name: string) => Parsed | undefined
   }
 }
 
@@ -32,7 +34,7 @@ export function lint(parsed: Parsed, options: LintOptions = {}): Diagnostic[] {
     }
 
     if (node.kind === 'header') {
-      const ok = (first.kind === 'prefix' && PREFIXES.includes(first.text)) || first.kind === 'comment'
+      const ok = (first.kind === 'prefix' && PREFIXES.includes(first.text)) || first.kind === 'comment' || first.kind === 'import'
       if (!ok) add('no-prefix', 'error', first, 'line has no - and no prefix (@ $ ? # //)')
     } else if (!node.parent) {
       add('orphan-child', 'error', first, '- line has no header above it')
@@ -62,6 +64,14 @@ export function lint(parsed: Parsed, options: LintOptions = {}): Diagnostic[] {
     childSincePrevious = false
   }
 
+  // every definition of an imported spec counts as defined here
+  const imported = new Set<string>()
+  for (const ref of importsOf(parsed)) {
+    const spec = options.file?.resolveImport?.(ref.name)
+    if (options.file?.resolveImport && !spec) add('unresolved-import', 'error', ref.token, `${ref.name} does not exist`)
+    for (const s of spec ? collectSymbols(spec) : []) if (s.isDefinition) imported.add(s.key)
+  }
+
   const symbols = collectSymbols(parsed)
   const defs = new Map<string, number>()
   const referenced = new Set<string>()
@@ -74,7 +84,7 @@ export function lint(parsed: Parsed, options: LintOptions = {}): Diagnostic[] {
     }
   }
   for (const s of symbols) {
-    if (!s.isDefinition && !defs.has(s.key)) add('undefined-reference', 'error', s.location, `${s.key} is not defined`)
+    if (!s.isDefinition && !defs.has(s.key) && !imported.has(s.key)) add('undefined-reference', 'error', s.location, `${s.key} is not defined`)
   }
   const reported = new Set<string>()
   for (const s of symbols) {

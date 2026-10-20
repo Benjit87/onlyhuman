@@ -123,7 +123,9 @@ node src/cli.ts def spec/spec.human:15:2
 - From a definition header in a `.bot`, it jumps to the code line in its `[path][line]`.
 - A reference jumps to its header in the same file.
 
-Lint rules: `no-prefix`, `orphan-child`, `bad-indent`, `indent-jump`, `repeated-bullet`, `consecutive-header`, `undefined-reference`, `duplicate-definition`, `dangling-operator` (errors), and `unused-definition`, `missing-robot`, `missing-human`, `broken-pointer` (warnings).
+- An `import <file>.human` line (bare, or as a child `- import <file>.human`) makes every definition of that spec under `spec/` count as defined here. The cursor on the file name opens that file, and a reference to an imported name jumps to its header there. Imports are one level only. A line with anything else after the file name, or a `*` in it, is plain text, not an import.
+
+Lint rules: `no-prefix`, `orphan-child`, `bad-indent`, `indent-jump`, `repeated-bullet`, `consecutive-header`, `undefined-reference`, `duplicate-definition`, `dangling-operator`, `unresolved-import` (errors), and `unused-definition`, `missing-robot`, `missing-human`, `broken-pointer` (warnings).
 
 ### VS Code
 

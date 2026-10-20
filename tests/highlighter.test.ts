@@ -86,3 +86,25 @@ test('comment swallows everything after //, bullets and bare prefixes handled', 
   assert.deepEqual(scopes('- a@b http://x'), ['punctuation.definition.list.begin:-', 'string.unquoted.word:a@b', 'string.unquoted.word:http://x'])
   assert.deepEqual(scopes('- "//" a//b \\// x'), ['punctuation.definition.list.begin:-', 'string.unquoted.word:"//"', 'string.unquoted.word:a//b', 'string.unquoted.word:\\//', 'string.unquoted.word:x'])
 })
+
+test('import is a keyword only as the first word, with exactly one file name', () => {
+  assert.deepEqual(scopes('import a.human'), ['keyword.control.import:import', 'string.unquoted.word:a.human'])
+  // the emulation above ignores capture 1, which scopes the bullet of an import line
+  assert.deepEqual(scopes('- import a.human // why'), [
+    'keyword.control.import:import',
+    'string.unquoted.word:a.human',
+    'comment.line.double-slash:// why',
+  ])
+  assert.deepEqual(scopes('- import *.human all'), [
+    'punctuation.definition.list.begin:-',
+    'string.unquoted.word:import',
+    'string.unquoted.word:*.human',
+    'string.unquoted.word:all',
+  ])
+  assert.deepEqual(scopes('- a import b.human'), [
+    'punctuation.definition.list.begin:-',
+    'string.unquoted.word:a',
+    'string.unquoted.word:import',
+    'string.unquoted.word:b.human',
+  ])
+})
