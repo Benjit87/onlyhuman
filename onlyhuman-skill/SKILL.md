@@ -23,7 +23,7 @@ description: "Write and maintain onlyhuman specs, a descriptive language where t
 - ? prefix = state
 - $ prefix = entity
 - "//" prefix = user comment, can be a note or an instruction
-- # prefix = user requirement statement
+- "#" prefix = user requirement statement
 - "->" = logic flow
 - operator == can mean equal semantically or literally, robot decides
 - "+" operator means combine the behavior into a set
@@ -36,6 +36,10 @@ description: "Write and maintain onlyhuman specs, a descriptive language where t
 - a prefix header must not be followed by another prefix header without at least one child line between them; blank lines do not count
   - invalid: `#1` then `#2`
   - valid: `#1` then `- detail` then `#2`
+- `import <file>.human` on its own line, bare or as a child (`- import <file>.human`), makes every definition of that spec under spec/ count as defined here
+  - exactly one file name after import, no `*`; anything else on the line means it is plain text, not an import
+  - one level only, the imported spec's own imports are not followed
+  - a local definition with the same name wins
 
 # .bot definition
 - *.bot uses the same syntax as *.human, with more detail

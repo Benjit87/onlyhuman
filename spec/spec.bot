@@ -12,7 +12,7 @@
   - src/parser.ts // $Tokens + $Structure -> parser -> ?Parsed
   - src/linter.ts // @Linter
   - src/definition.ts // @GoToDefinition
-  - src/files.ts // fs access for sibling files, project root and pointers, used by @CLI and @LSP
+  - src/files.ts // fs access for sibling files, project root, pointers and imported specs, used by @CLI and @LSP
   - src/lsp/server.ts // @LSP
   - src/cli.ts // @CLI
   - src/skill.ts // @Skill copy operation
@@ -31,7 +31,7 @@
 - [path][line] numbers are targets and get updated after coding, applies to every header
 
 # version control [./package.json][1]
-- version 0.5.0 is applied to package.json and vscode/package.json
+- version 0.6.0 is applied to package.json and vscode/package.json
   - %vscodeManifest [./vscode/package.json][1] // keep the extension version aligned
 - package-lock.json and vscode/package-lock.json are in sync
 - bump the version before publishing the npm package or the .vsix
@@ -39,7 +39,7 @@
 #vscode deployment [./vscode/package.json][1]
 - package as a .vsix, installed with code --install-extension
   - build: cd vscode, npm run build, then npx vsce package
-  - output: onlyhuman-vscode-<version>.vsix, version is 0.5.0 and is bumped per release
+  - output: onlyhuman-vscode-<version>.vsix, version is 0.6.0 and is bumped per release
   - install: code --install-extension onlyhuman-vscode-<version>.vsix
 - bundle the server and client with esbuild into vscode/dist
   - vscode/dist/server.js // from src/lsp/server.ts, with vscode-languageserver bundled in
@@ -127,7 +127,7 @@ $Structure [./src/parser.ts][6]
 - *.human and *.bot use the same child and indentation rules
 - consecutive-header is an error: a prefix header must have at least one child line before the next prefix header; blank lines do not count
 
-$Token [./src/types.ts][15]
+$Token [./src/types.ts][16]
 - every token has kind, text, line, col, length // 1-based line, 0-based col
 - prefixes are $ @ ? and #
   - prefix token, followed by word as its name when attached e.g $Token = $ + word(Token)
@@ -146,6 +146,12 @@ $Token [./src/types.ts][15]
 - percent // %, *.bot only, marks a method or additional detail in a child
   - attached to the name, e.g %tokenize, no space
   - the tokenizer emits it in any file, only the *.bot grammar highlights it
+- "import" // "import *.human" import all definations, starts in a new line
+  - import is a keyword token, only when it is the first word of a line, either bare or after a bullet, e.g `import backend.human` or `- import backend.human`
+  - the next word is the file name, one file per line, resolved under the spec/ folder; a missing .human extension is not added
+  - anywhere else on a line, or inside a comment_sentence, import is an ordinary word
+  - a bare import line is exempt from no-prefix and consecutive-header, so it can start a line with no prefix
+  - meaning: every definition ($ @ ? #) of the named spec counts as defined in this file, see @Linter and @GoToDefinition
 - word // can represent methods or a defined behavior or just a sentence, semantically driven
   - any other run of non-space characters e.g *.human, tokenize
   - a // is a comment only when it starts a space-separated run
@@ -158,10 +164,10 @@ $Token [./src/types.ts][15]
   - kept as one raw string, never tokenized further, never a reference
   - instructions for the robot when generating, ignored by lint and go-to-definition
 
-$Tokens [./src/types.ts][24]
+$Tokens [./src/types.ts][25]
 - $Token // list, in source order, line breaks kept via line number
 
-$Node [./src/types.ts][28]
+$Node [./src/types.ts][29]
 - $Token // the token of this line, first token after bullet
 - tokens // all $Token of the line, in order
 - depth
@@ -171,7 +177,7 @@ $Node [./src/types.ts][28]
 ?Data [./src/tokenizer.ts][7]
 - $Data
 
-?Parsed [./src/types.ts][39]
+?Parsed [./src/types.ts][40]
 - AST of $Node // tree of nodes, one per line
 - roots = header nodes, children nest by $Structure
 - a child with no header above it is kept at root and flagged by @Linter
@@ -187,15 +193,19 @@ $Node [./src/types.ts][28]
   - %parse(tokens: Tokens): Parsed [./src/parser.ts][16]
   - %parseText(text: string): Parsed [./src/parser.ts][53] // tokenize + parse in one call
 
-@Linter [./src/linter.ts][19]
+@Linter [./src/linter.ts][21]
 - ?Parsed -> lint -> diagnostics
 - method signatures
-  - %lint(parsed: Parsed, options: LintOptions = {}): Diagnostic[] [./src/linter.ts][19] // pure: parse tree + optional file info -> diagnostics, sorted by line then col
-  - %LintOptions [./src/linter.ts][6] // optional file info enables missing-robot, missing-human and broken-pointer
+  - %lint(parsed: Parsed, options: LintOptions = {}): Diagnostic[] [./src/linter.ts][21] // pure: parse tree + optional file info -> diagnostics, sorted by line then col
+  - %LintOptions [./src/linter.ts][6] // optional file info enables missing-robot, missing-human, broken-pointer and unresolved-import; resolveImport(file) returns the parsed imported spec or none, so the linter stays free of fs
 - diagnostic = rule, severity, line, col, length, message
 - definition = a header whose first token is $ ? or @ plus a name
 - reference = $ ? or @ plus a name anywhere outside a comment, names are case-sensitive and per prefix, so $Data != ?Data
 - the same rules run on *.human and *.bot
+- import *.human imports all relevant definitions
+  - every $ @ ? # definition of the imported spec counts as defined here, so undefined-reference does not fire on it
+  - imported definitions are never reported as unused-definition, and a local definition with the same name wins, not a duplicate-definition
+  - imports are one level only, the imported spec's own imports are not followed, so there are no cycles
 - file info, when the caller has it = path, whether the sibling exists, and a way to count lines of a pointed file, so the linter itself stays free of fs
 - rules
   - no-prefix // error: header line with no - and no prefix e.g `Parser`
@@ -204,12 +214,13 @@ $Node [./src/types.ts][28]
   - indent-jump // error: child deeper than parent depth + 1
   - repeated-bullet // error: a dash token followed by other content after the child marker; use indentation for nesting
   - consecutive-header // error: a prefix header followed by another prefix header with no child line between them; blank lines do not count
-  - undefined-reference // error: reference with no definition e.g $Nodee
+  - undefined-reference // error: reference with no definition in this file or in an imported spec e.g $Nodee
   - duplicate-definition // error: same prefix + name defined twice, reported on the second
   - dangling-operator // error: an operator missing a left or right operand
   - unused-definition // warning: defined but never referenced
   - missing-robot // warning: x.human has no sibling x.bot, only when the caller passes file info
   - missing-human // warning: x.bot has no sibling x.human, only when the caller passes file info
+  - unresolved-import // error: an import line whose file is missing, or has no file name, only when the caller passes file info
   - broken-pointer // warning: a *.bot header whose [path][line] points to a missing file, or a line past the end of it
     - [path] is relative to the nearest folder that holds .git, found by walking up from the spec file
     - when no .git is found, [path] is relative to the parent of the spec/ folder
@@ -222,25 +233,29 @@ $Node [./src/types.ts][28]
   - a line that is only one operator, e.g under $Token, it is a listing
   - quoted text like `"$Name"`, it is a word
 
-@GoToDefinition [./src/definition.ts][90]
+@GoToDefinition [./src/definition.ts][112]
 - (?Parsed, position) -> find token -> definition location
 - (?Parsed, name) -> definition location
 - name = prefix + name, e.g $Token
 - method signatures
   - %collectSymbols(parsed: Parsed): SymbolRef[] [./src/definition.ts][11] // shared definition and reference scan, also used by @Linter
-  - %findDefinition(parsed: Parsed, key: string): Location | undefined [./src/definition.ts][29] // by name, key = prefix + name
-  - %definitionAt(parsed: Parsed, line: number, col: number, robot?: Parsed): Location | undefined [./src/definition.ts][90] // by position
-  - %pointerAt(parsed: Parsed, line: number, col: number): Pointer | undefined [./src/definition.ts][112] // in a *.bot, header or % line to its [path][line]
-  - %parsePointer(token: Token): Pointer | undefined [./src/definition.ts][63] // parse the glued [path][line] word without reading the file
-  - %pointerOf(node: Node): Pointer | undefined [./src/definition.ts][69] // find the first pointer in a header or % child line
+  - %findDefinition(parsed: Parsed, key: string): Location | undefined [./src/definition.ts][51] // by name, key = prefix + name
+  - %definitionAt(parsed: Parsed, line: number, col: number, robot?: Parsed): Location | undefined [./src/definition.ts][112] // by position
+  - %importAt(parsed: Parsed, line: number, col: number): string | undefined [./src/definition.ts][46] // on the file name of an import line, returns that file name so the caller opens it at line 1
+  - %pointerAt(parsed: Parsed, line: number, col: number): Pointer | undefined [./src/definition.ts][149] // in a *.bot, header or % line to its [path][line]
+  - %parsePointer(token: Token): Pointer | undefined [./src/definition.ts][85] // parse the glued [path][line] word without reading the file
+  - %pointerOf(node: Node): Pointer | undefined [./src/definition.ts][91] // find the first pointer in a header or % child line
 - found: returns line, col, length of the defining header
 - not found, or token is not an $ ? @ reference or an eligible header: returns none
 - parentheses around a prefixed symbol do not block navigation, e.g `(@Parser)` and `(?Parsed)` resolve on the symbol
 - duplicates: first definition wins, @Linter reports the rest
 - cursor in a comment returns none
-- scope is one *.human file plus its sibling *.bot, no other files
+- scope is one *.human file plus its sibling *.bot, plus the files named by its import lines, no other files
 - in a *.human
   - a reference goes to its .human header
+  - a reference to an imported name goes to its header in the imported file
+  - import file.human, with the cursor on the file name, goes to the target file at line 1
+  - if the target file is missing, stays on the import line
   - cursor on a definition header of $ @ ? or # goes to the matching header in x.bot
   - # headers match by their full requirement text after #, excluding a trailing [path][line] pointer in x.bot
   - the robot header is found by parsing x.bot with the same @Parser, trailing [path][line] on the header is ignored
@@ -260,19 +275,20 @@ $Node [./src/types.ts][28]
 - *.bot gets the same grammar through its own language id
 - lexical only, no server needed, so it does not depend on @LSP or @CLI
 - method signatures // the highlighter is declarative; these are its grammar rules, one per token class
-  - %comment [./vscode/syntaxes/human.tmLanguage.json][20] // comment.line.double-slash.human, // to end of line
-  - %requirement [./vscode/syntaxes/human.tmLanguage.json][24] // markup.heading.human, # to end of line or comment
-  - %entity [./vscode/syntaxes/human.tmLanguage.json][29] // entity.name.type.human, $name
-  - %state [./vscode/syntaxes/human.tmLanguage.json][33] // variable.other.constant.human, ?name
-  - %service [./vscode/syntaxes/human.tmLanguage.json][37] // entity.name.function.human, @name
-  - %bare-prefix [./vscode/syntaxes/human.tmLanguage.json][41] // punctuation.definition.prefix.human, a prefix alone
-  - %arrow [./vscode/syntaxes/human.tmLanguage.json][45] // keyword.operator.arrow.human
-  - %plus [./vscode/syntaxes/human.tmLanguage.json][49] // keyword.operator.plus.human
-  - %equals [./vscode/syntaxes/human.tmLanguage.json][53] // keyword.operator.equals.human
-  - %bullet [./vscode/syntaxes/human.tmLanguage.json][57] // punctuation.definition.list.begin.human
-  - %dash [./vscode/syntaxes/human.tmLanguage.json][61] // punctuation.definition.dash.human
-  - %word [./vscode/syntaxes/human.tmLanguage.json][65] // string.unquoted.word.human
+  - %comment [./vscode/syntaxes/human.tmLanguage.json][28] // comment.line.double-slash.human, // to end of line
+  - %requirement [./vscode/syntaxes/human.tmLanguage.json][32] // markup.heading.human, # to end of line or comment
+  - %entity [./vscode/syntaxes/human.tmLanguage.json][37] // entity.name.type.human, $name
+  - %state [./vscode/syntaxes/human.tmLanguage.json][41] // variable.other.constant.human, ?name
+  - %service [./vscode/syntaxes/human.tmLanguage.json][45] // entity.name.function.human, @name
+  - %bare-prefix [./vscode/syntaxes/human.tmLanguage.json][49] // punctuation.definition.prefix.human, a prefix alone
+  - %arrow [./vscode/syntaxes/human.tmLanguage.json][53] // keyword.operator.arrow.human
+  - %plus [./vscode/syntaxes/human.tmLanguage.json][57] // keyword.operator.plus.human
+  - %equals [./vscode/syntaxes/human.tmLanguage.json][61] // keyword.operator.equals.human
+  - %bullet [./vscode/syntaxes/human.tmLanguage.json][65] // punctuation.definition.list.begin.human
+  - %dash [./vscode/syntaxes/human.tmLanguage.json][69] // punctuation.definition.dash.human
+  - %word [./vscode/syntaxes/human.tmLanguage.json][73] // string.unquoted.word.human
   - %percent [./vscode/syntaxes/robot.tmLanguage.json][10] // keyword.operator.percent.human, only in *.bot
+  - %import [./vscode/syntaxes/human.tmLanguage.json][21] // keyword.control.import.human, the word import as the first word of a line, in both grammars
 - each token type gets its own highlighting scope; the editor theme picks the actual colour
   - the $ name // entity.name.type
   - the ? name // variable.other.constant
@@ -282,13 +298,14 @@ $Node [./src/types.ts][28]
   - arrow, plus and equals // distinct keyword.operator scopes
   - bullet and later dash // distinct punctuation scopes
   - percent // keyword.operator scope of its own, *.bot only
+  - import // keyword.control scope, only as the first word of a line, any other import is a word
   - word // distinct word scope, theme decides its colour
   - comment_sentence // comment scope, shared with the comment marker because the entire comment is highlighted together
 - a bare prefix with no name gets the punctuation scope of its prefix
 - prefix colour covers prefix + name together, so references and definitions look the same
 - semantic highlighting (undefined names in a different colour) is not part of this, it would be a later step in @LSP
 
-@LSP [./src/lsp/server.ts][19]
+@LSP [./src/lsp/server.ts][27]
 - @GoToDefinition
 - @Linter
 - transport ipc or stdio, library vscode-languageserver, full text sync
@@ -316,12 +333,12 @@ $Node [./src/types.ts][28]
   - onlyhuman lint validates .human and .bot specs, not Markdown
 - tests assert the copied file matches onlyhuman-skill/SKILL.md and ignores a different SKILL.md in the user project
 
-@CLI [./src/cli.ts][21]
+@CLI [./src/cli.ts][29]
 - @GoToDefinition
 - @Linter
 - @Skill
 - onlyhuman skill init
-  - %skillInit [./src/cli.ts][24] // parse the command and call initSkill
+  - %skillInit [./src/cli.ts][32] // parse the command and call initSkill
   - copy the library skill file as is to onlyhuman-skill/SKILL.md under the given directory
   - create onlyhuman-skill when missing
   - fail if the library skill file is missing
@@ -338,7 +355,7 @@ $Node [./src/types.ts][28]
   - exit 1 if not found
 - positions 1-based in the cli output
 - def supports both name form and position form
-- the cli passes file info, so missing-robot, missing-human and broken-pointer are checked on lint
+- the cli passes file info, so missing-robot, missing-human, broken-pointer and unresolved-import are checked on lint, and imported specs are read from disk
 - @LSP passes file info too when the file is on disk
 
 // assumptions, open points in spec.human, change spec.human if wrong
@@ -352,7 +369,7 @@ $Node [./src/types.ts][28]
 // 8. the CLI bundle uses esbuild and targets Node 20 even though development uses Node 22.18; the source-TypeScript alternative keeps Node >=22.18
 // 9. package name availability is not checked until publish; the current name is onlyhuman and the scoped fallback is "@benjit87/onlyhuman"
 // 10. the npm package exports only the CLI; the parser API remains internal until the human asks for it
-// 11. # version control applies 0.5.0 to package.json, vscode/package.json and both lockfiles
+// 11. # version control applies 0.6.0 to package.json, vscode/package.json and both lockfiles
 // 12. @Skill is exposed as onlyhuman skill init and writes onlyhuman-skill/SKILL.md under the given directory
 // 13. skill init refuses to overwrite an existing onlyhuman-skill/SKILL.md unless --force is passed
 // 14. @Skill in spec.human has no flow line now; --force, create-directory and print-path behaviour are kept from the previous spec as details
@@ -361,3 +378,12 @@ $Node [./src/types.ts][28]
 // 17. consecutive-header applies only to prefix headers (@ ? $ #); comment headers are not counted, and a final header with no child is not flagged unless a separate empty-header rule is added
 // 18. the example '(?Parser)' is read as a state name; ?Parser is undefined in this spec, so the example covers recognition inside parentheses, not a successful lookup
 // 19. only parentheses are treated as ignored punctuation; other punctuation such as commas remains a separate word
+// 20. "import" is now tool-supported: @Linter, @GoToDefinition and @Highlighter handle it; before this regen it was a robot-only convention
+// 21. "*.human" in the import line is read as a placeholder for a spec file name such as backend.human, resolved under spec/, not a glob; "import all" means every $ @ ? # header of that file
+// 22. "starts in a new line" is read as: import is the first word of its own line, one file per line; it may be bare (no prefix, exempt from no-prefix) or a child line after a bullet
+// 23. "relevant definitions" is read as all definitions of the imported spec; unused-definition is not applied to imported names
+// 24. the human did not say what happens when the file is missing, so unresolved-import is added as an error, only when file info is passed
+// 25. imports are one level only, so no cycle rule is needed; transitive imports and cycle detection are left out
+// 26. a local definition with the same name as an imported one wins and is not reported as a duplicate
+// 27. go-to-definition on a reference to an imported name jumps to the imported file; the human only wrote "import file.human, goes to the target file", so this is an extension
+// 28. new method pointers [path][line] for %importAt, %import and unresolved-import are filled after coding, since the code does not exist yet

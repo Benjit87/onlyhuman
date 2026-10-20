@@ -9,7 +9,15 @@ import {
 } from 'vscode-languageserver/node.js'
 import { TextDocument } from 'vscode-languageserver-textdocument'
 import { definitionAt, pointerAt } from '../definition.ts'
-import { loadRobot, pointerLineCounter, pointerTargetExists, robotPathFor, siblingExists } from '../files.ts'
+import {
+  importPathFor,
+  importResolver,
+  loadRobot,
+  pointerLineCounter,
+  pointerTargetExists,
+  robotPathFor,
+  siblingExists,
+} from '../files.ts'
 import { lint } from '../linter.ts'
 import { parseText } from '../parser.ts'
 
@@ -28,7 +36,12 @@ function validate(doc: TextDocument) {
   let file
   if (doc.uri.startsWith('file:')) {
     const path = fileURLToPath(doc.uri)
-    file = { path, siblingExists: siblingExists(path), lineCount: pointerLineCounter(path) }
+    file = {
+      path,
+      siblingExists: siblingExists(path),
+      lineCount: pointerLineCounter(path),
+      resolveImport: importResolver(path),
+    }
   }
   const diagnostics = lint(parsed, { file }).map((d) => ({
     severity: d.severity === 'error' ? DiagnosticSeverity.Error : DiagnosticSeverity.Warning,
@@ -60,10 +73,17 @@ connection.onDefinition((params) => {
     const at = { line: ptr.line - 1, character: 0 }
     return { uri: pathToFileURL(code).href, range: { start: at, end: at } }
   }
-  const loc = definitionAt(parsed, line, col, path?.endsWith('.human') ? loadRobot(path) : undefined)
+  const loc = definitionAt(
+    parsed,
+    line,
+    col,
+    path?.endsWith('.human') ? loadRobot(path) : undefined,
+    path ? importResolver(path) : undefined,
+  )
   if (!loc) return null
+  const imported = loc.importFile && path ? importPathFor(path, loc.importFile) : undefined
   return {
-    uri: loc.file === 'robot' && path ? pathToFileURL(robotPathFor(path)).href : doc.uri,
+    uri: imported ? pathToFileURL(imported).href : loc.file === 'robot' && path ? pathToFileURL(robotPathFor(path)).href : doc.uri,
     range: {
       start: { line: loc.line - 1, character: loc.col },
       end: { line: loc.line - 1, character: loc.col + loc.length },

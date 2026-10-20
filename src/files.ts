@@ -1,6 +1,6 @@
 // the only fs access around the pure core: sibling file, project root, pointer targets
 import { existsSync, readFileSync, statSync } from 'node:fs'
-import { basename, dirname, join, resolve } from 'node:path'
+import { basename, dirname, join, resolve, sep } from 'node:path'
 import { parseText } from './parser.ts'
 import type { Parsed } from './types.ts'
 
@@ -68,4 +68,27 @@ export function pointerLineCounter(filePath: string): ((pointerPath: string) => 
 export function pointerTargetExists(filePath: string, pointerPath: string): string | undefined {
   const abs = resolvePointerPath(filePath, pointerPath)
   return abs && isFile(abs) ? abs : undefined
+}
+
+// the spec/ folder an import is resolved under: nearest spec folder above the file, else the file's own folder
+export function specDirFor(filePath: string): string {
+  const own = dirname(resolve(filePath))
+  for (let dir = own; ; dir = dirname(dir)) {
+    if (basename(dir) === 'spec') return dir
+    if (dirname(dir) === dir) return own
+  }
+}
+
+// absolute path of the spec an import line names, undefined if it is missing or leaves the spec folder
+export function importPathFor(filePath: string, name: string): string | undefined {
+  const dir = specDirFor(filePath)
+  const abs = resolve(dir, name)
+  return abs.startsWith(dir + sep) && isFile(abs) ? abs : undefined
+}
+
+export function importResolver(filePath: string): (name: string) => Parsed | undefined {
+  return (name) => {
+    const abs = importPathFor(filePath, name)
+    return abs ? parseText(readFileSync(abs, 'utf8')) : undefined
+  }
 }

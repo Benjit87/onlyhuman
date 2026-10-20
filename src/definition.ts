@@ -26,6 +26,28 @@ export function collectSymbols(parsed: Parsed): SymbolRef[] {
   return out
 }
 
+export interface ImportRef {
+  name: string // file name as written, resolved under spec/
+  token: Token // the file name word
+}
+
+// the file named by an import line
+export function importOf(node: Node): ImportRef | undefined {
+  const i = node.tokens.findIndex((t) => t.kind === 'import')
+  const file = i === -1 ? undefined : node.tokens[i + 1]
+  return file ? { name: file.text, token: file } : undefined
+}
+
+export function importsOf(parsed: Parsed): ImportRef[] {
+  return parsed.nodes.flatMap((n) => importOf(n) ?? [])
+}
+
+// cursor on the file name of an import line -> that file name
+export function importAt(parsed: Parsed, line: number, col: number): string | undefined {
+  const ref = importsOf(parsed).find((r) => r.token.line === line)
+  return ref && col >= ref.token.col && col <= ref.token.col + ref.token.length ? ref.name : undefined
+}
+
 export function findDefinition(parsed: Parsed, key: string): Location | undefined {
   if (key.startsWith('#')) return parsed.nodes.map(requirementHeader).find((h) => h?.key === key)?.location
   return collectSymbols(parsed).find((s) => s.isDefinition && s.key === key)?.location
@@ -92,7 +114,15 @@ export function definitionAt(
   line: number,
   col: number,
   robot?: Parsed,
+  resolveImport?: (name: string) => Parsed | undefined,
 ): Location | undefined {
+  const imported = importAt(parsed, line, col)
+  if (imported) {
+    // the file name of an import line opens that file, a missing file stays on the import line
+    const ref = importsOf(parsed).find((r) => r.name === imported && r.token.line === line)!
+    if (resolveImport?.(imported)) return { line: 1, col: 0, length: 1, importFile: imported }
+    return { line, col: ref.token.col, length: ref.token.length }
+  }
   const requirement = requirementAt(parsed, line, col)
   if (requirement) {
     const target = robot && findDefinition(robot, requirement.key)
@@ -104,7 +134,14 @@ export function definitionAt(
     const target = findDefinition(robot, sym.key)
     if (target) return { ...target, file: 'robot' }
   }
-  return findDefinition(parsed, sym.key)
+  const local = findDefinition(parsed, sym.key)
+  if (local || !resolveImport) return local
+  // a reference to an imported name goes to its header in the imported file
+  for (const ref of importsOf(parsed)) {
+    const target = findDefinition(resolveImport(ref.name) ?? { roots: [], nodes: [], tokens: [] }, sym.key)
+    if (target) return { ...target, importFile: ref.name }
+  }
+  return undefined
 }
 
 // In a .bot: cursor on a definition header or a % child line -> the [path][line] it ends with, if any.

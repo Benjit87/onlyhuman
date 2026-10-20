@@ -3,7 +3,15 @@
 import { readFileSync } from 'node:fs'
 import { relative } from 'node:path'
 import { definitionAt, findDefinition, pointerAt } from './definition.ts'
-import { loadRobot, pointerLineCounter, pointerTargetExists, robotPathFor, siblingExists } from './files.ts'
+import {
+  importPathFor,
+  importResolver,
+  loadRobot,
+  pointerLineCounter,
+  pointerTargetExists,
+  robotPathFor,
+  siblingExists,
+} from './files.ts'
 import { lint } from './linter.ts'
 import { parseText } from './parser.ts'
 import { initSkill } from './skill.ts'
@@ -41,7 +49,12 @@ function main(argv: string[]): number {
   if (cmd === 'lint' && rest.length === 1) {
     const file = rest[0]
     const diags = lint(load(file), {
-      file: { path: file, siblingExists: siblingExists(file), lineCount: pointerLineCounter(file) },
+      file: {
+        path: file,
+        siblingExists: siblingExists(file),
+        lineCount: pointerLineCounter(file),
+        resolveImport: importResolver(file),
+      },
     })
     for (const d of diags) console.log(`${file}:${d.line}:${d.col + 1} ${d.severity} ${d.rule} ${d.message}`)
     return diags.some((d) => d.severity === 'error') ? 1 : 0
@@ -67,9 +80,13 @@ function main(argv: string[]): number {
         console.log(`${relative(process.cwd(), code)}:${ptr.line}:1`)
         return 0
       }
-      const loc = definitionAt(parsed, line, col, loadRobot(m[1]))
+      const loc = definitionAt(parsed, line, col, loadRobot(m[1]), importResolver(m[1]))
       if (!loc) return notFound(rest[0])
-      const where = loc.file === 'robot' ? robotPathFor(m[1]) : m[1]
+      const where = loc.importFile
+        ? relative(process.cwd(), importPathFor(m[1], loc.importFile)!)
+        : loc.file === 'robot'
+          ? robotPathFor(m[1])
+          : m[1]
       console.log(`${where}:${loc.line}:${loc.col + 1}`)
       return 0
     }

@@ -10,6 +10,7 @@ export type TokenKind =
   | 'bullet' // first - on a line
   | 'dash' // any later -
   | 'percent' // % (*.bot only by convention)
+  | 'import' // the word import, first word of a line followed by exactly one file name
   | 'word'
 
 export interface Token {
@@ -58,6 +59,7 @@ export interface Location {
   col: number // 0-based
   length: number
   file?: 'robot' // set when the location is in the sibling .bot, absent = the .human itself
+  importFile?: string // set when the location is in an imported spec, e.g. backend.human, resolved under spec/
 }
 
 export const PREFIXES = ['@', '$', '?', '#']

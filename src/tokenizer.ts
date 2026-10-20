@@ -10,6 +10,7 @@ export function tokenize(text: string): Tokens {
   lines.forEach((raw, i) => {
     const line = i + 1
     const indent = /^[ \t]*/.exec(raw)![0]
+    const lineStart = tokens.length
     let pos = indent.length
     let first = true
     const push = (kind: TokenKind, s: string, col: number) =>
@@ -71,6 +72,16 @@ export function tokenize(text: string): Tokens {
       } else classify(run, pos)
       pos = end
     }
+    markImport(tokens.slice(lineStart))
   })
   return tokens
+}
+
+// `import x.human` as the first words of a line: import + exactly one file name (no *) + optional comment.
+// Anything else, e.g. `import all the things` or `import *.human`, is plain words describing an import.
+function markImport(line: Token[]) {
+  const [keyword, file, ...tail] = line[0]?.kind === 'bullet' ? line.slice(1) : line
+  if (keyword?.kind !== 'word' || keyword.text !== 'import') return
+  if (file?.kind !== 'word' || file.text.includes('*')) return
+  if (tail.every((t) => t.kind === 'comment' || t.kind === 'comment_sentence')) keyword.kind = 'import'
 }

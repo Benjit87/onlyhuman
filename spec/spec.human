@@ -5,7 +5,7 @@
 - @Linter, @GoToDefinition and @Highlighter work on *.bot as well as *.human
 
 # version control
-- version: 0.5.0
+- version: 0.6.0
 - update for all modules
   - vscode/package.json
   - package.json
@@ -49,6 +49,7 @@ $Token
 - -
 - word // a // inside quotes e.g "//" is a word, not a comment
 - % // attach to the name, e.g %tokenize, no space
+- "import" // "import *.human" import all definations, starts in a new line
 
 $Node
 - $Token // the token of this line
@@ -75,6 +76,7 @@ $Tokens
 - for % in *.bot it means go to the code file and line
 - if no *.bot or header, stay on the definition
 - parethnesis like () is ignored ( e.g '(?Parser)' ) the go to definition sould work
+- import file.human , goes to the target file
 
 @Highlighter
 - provide relevant method signatures with some explaination
@@ -89,6 +91,7 @@ $Tokens
 - ==
 - -
 - %
+- "import"
 
 @Linter
 - provide relevant method signatures with some explaination
@@ -97,6 +100,7 @@ $Tokens
 - [path][line] target must exist, warning if the file or line is missing
 - [path] is relative to the folder that holds .git or the parent of spec folder
 - missing-human, same as missing-robot, for *.bot
+- import *.human import all relevant definations
 
 @LSP
 - @GoToDefinition

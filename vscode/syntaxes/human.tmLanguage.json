@@ -3,6 +3,7 @@
   "name": "human",
   "scopeName": "source.human",
   "patterns": [
+    { "include": "#import" },
     { "include": "#comment" },
     { "include": "#requirement" },
     { "include": "#entity" },
@@ -17,6 +18,13 @@
     { "include": "#word" }
   ],
   "repository": {
+    "import": {
+      "match": "^([ ]*(?:-[ ]+)?)(import)(?=[ ]+(?!//)[^\\s*]+(?:[ ]+//.*)?[ ]*$)",
+      "captures": {
+        "1": { "patterns": [{ "match": "-", "name": "punctuation.definition.list.begin.human" }] },
+        "2": { "name": "keyword.control.import.human" }
+      }
+    },
     "comment": {
       "name": "comment.line.double-slash.human",
       "match": "(?:^|(?<=\\s))//.*$"
