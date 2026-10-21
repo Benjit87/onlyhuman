@@ -31,7 +31,7 @@
 - [path][line] numbers are targets and get updated after coding, applies to every header
 
 # version control [./package.json][1]
-- version 0.6.0 is applied to package.json and vscode/package.json
+- version 0.7.0 is applied to package.json and vscode/package.json
   - %vscodeManifest [./vscode/package.json][1] // keep the extension version aligned
 - package-lock.json and vscode/package-lock.json are in sync
 - bump the version before publishing the npm package or the .vsix
@@ -39,7 +39,7 @@
 #vscode deployment [./vscode/package.json][1]
 - package as a .vsix, installed with code --install-extension
   - build: cd vscode, npm run build, then npx vsce package
-  - output: onlyhuman-vscode-<version>.vsix, version is 0.6.0 and is bumped per release
+  - output: onlyhuman-vscode-<version>.vsix, version is 0.7.0 and is bumped per release
   - install: code --install-extension onlyhuman-vscode-<version>.vsix
 - bundle the server and client with esbuild into vscode/dist
   - vscode/dist/server.js // from src/lsp/server.ts, with vscode-languageserver bundled in
@@ -143,7 +143,7 @@ $Token [./src/types.ts][16]
   - space separated
 - dash // -
   - bullet if first on the line, else a - token
-- percent // %, *.bot only, marks a method or additional detail in a child
+- percent // %, marks a method or additional detail on a child line, never a header
   - attached to the name, e.g %tokenize, no space
   - the tokenizer emits it in any file, only the *.bot grammar highlights it
 - "import" // "import *.human" import all definations, starts in a new line
@@ -190,14 +190,27 @@ $Node [./src/types.ts][29]
 - parse(tokens) returns ?Parsed
 - method signatures
   - %tokenize(text: string): Tokens [./src/tokenizer.ts][7]
+    - input is the whole file text, lf or crlf, blank lines are skipped
+    - emits every $Token of a line in source order with line 1-based, col 0-based, length and the line indent
+    - a // starts a comment_sentence only when it begins a space-separated run, an import is marked only as the first word of a line with exactly one file name
+    - never throws, unknown text becomes word tokens
   - %parse(tokens: Tokens): Parsed [./src/parser.ts][16]
+    - groups tokens into one $Node per line and links parent and children by indent depth, 2 spaces per level
+    - a child with no header above it stays at root, bad indentation is kept in the tree for @Linter to report
+    - never throws, bad input still yields a tree
   - %parseText(text: string): Parsed [./src/parser.ts][53] // tokenize + parse in one call
+    - the entry point used by @Linter, @GoToDefinition, @LSP and @CLI
 
 @Linter [./src/linter.ts][21]
 - ?Parsed -> lint -> diagnostics
 - method signatures
   - %lint(parsed: Parsed, options: LintOptions = {}): Diagnostic[] [./src/linter.ts][21] // pure: parse tree + optional file info -> diagnostics, sorted by line then col
+    - runs every rule in the rules list below on one parse tree, the same for *.human and *.bot
+    - reads definitions from the tree plus the imported specs given by resolveImport, never reads a file itself
+    - returns an empty list when there is nothing to report, never throws
   - %LintOptions [./src/linter.ts][6] // optional file info enables missing-robot, missing-human, broken-pointer and unresolved-import; resolveImport(file) returns the parsed imported spec or none, so the linter stays free of fs
+    - file = path, siblingExists, lineCount(pointerPath) and resolveImport(name)
+    - without file, the four file rules are skipped
 - diagnostic = rule, severity, line, col, length, message
 - definition = a header whose first token is $ ? or @ plus a name
 - reference = $ ? or @ plus a name anywhere outside a comment, names are case-sensitive and per prefix, so $Data != ?Data
@@ -233,18 +246,33 @@ $Node [./src/types.ts][29]
   - a line that is only one operator, e.g under $Token, it is a listing
   - quoted text like `"$Name"`, it is a word
 
-@GoToDefinition [./src/definition.ts][112]
+@GoToDefinition [./src/definition.ts][113]
 - (?Parsed, position) -> find token -> definition location
 - (?Parsed, name) -> definition location
 - name = prefix + name, e.g $Token
 - method signatures
   - %collectSymbols(parsed: Parsed): SymbolRef[] [./src/definition.ts][11] // shared definition and reference scan, also used by @Linter
+    - returns one SymbolRef per attached $ @ ? prefix and name, with key, location and isDefinition
+    - isDefinition is true only when the symbol is the first token of a header
   - %findDefinition(parsed: Parsed, key: string): Location | undefined [./src/definition.ts][51] // by name, key = prefix + name
-  - %definitionAt(parsed: Parsed, line: number, col: number, robot?: Parsed): Location | undefined [./src/definition.ts][112] // by position
+    - a key starting with # matches the full requirement text, otherwise the first definition with that key wins
+    - returns none when there is no such definition
+  - %definitionAt(parsed: Parsed, line: number, col: number, robot?: Parsed): Location | undefined [./src/definition.ts][113] // by position, in a *.human also a % child line to the same % child line in the robot
+    - order of checks: import file name, % child line, # header, then $ @ ? symbol
+    - a definition header or % child goes to the robot when it is passed and has the match, a reference goes to its .human header, an unresolved reference tries the imported specs
+    - the cursor in a comment returns none, the function does no file reading
   - %importAt(parsed: Parsed, line: number, col: number): string | undefined [./src/definition.ts][46] // on the file name of an import line, returns that file name so the caller opens it at line 1
-  - %pointerAt(parsed: Parsed, line: number, col: number): Pointer | undefined [./src/definition.ts][149] // in a *.bot, header or % line to its [path][line]
+    - returns none when the cursor is not on an import file name
+  - %pointerAt(parsed: Parsed, line: number, col: number): Pointer | undefined [./src/definition.ts][191] // in a *.bot, header or % line to its [path][line]
+    - the cursor must be on the % or its name for a % line, or on the definition name for a header
+    - returns none when the line has no pointer, the caller checks that the file exists
   - %parsePointer(token: Token): Pointer | undefined [./src/definition.ts][85] // parse the glued [path][line] word without reading the file
   - %pointerOf(node: Node): Pointer | undefined [./src/definition.ts][91] // find the first pointer in a header or % child line
+    - returns the first token of the line that parses as [path][line], none if there is none
+  - %methodAt(parsed: Parsed, line: number, col: number) [./src/definition.ts][154] // private helper of definitionAt for the % child rule
+    - the cursor must be on the % or on the name glued to it, returns the node, the name and the location
+  - %headerKey(node: Node): string | undefined [./src/definition.ts][164] // private helper, prefix + name or # + requirement text of a header
+  - %robotMethod(parsed: Parsed, node: Node, robot: Parsed, name: string): Location | undefined [./src/definition.ts][173] // private helper, finds the same %name under the same top-level header in the robot, any pointer is ignored
 - found: returns line, col, length of the defining header
 - not found, or token is not an $ ? @ reference or an eligible header: returns none
 - parentheses around a prefixed symbol do not block navigation, e.g `(@Parser)` and `(?Parsed)` resolve on the symbol
@@ -261,12 +289,16 @@ $Node [./src/types.ts][29]
   - the robot header is found by parsing x.bot with the same @Parser, trailing [path][line] on the header is ignored
   - found: location carries the robot file, so @LSP and @CLI can open another file
   - no x.bot, or no such header in it: stays on the .human definition
+  - cursor on a % child line goes to the same % child line in x.bot, under the same parent header
+    - the parent header is found as for a definition header, then its children are searched for the same %name
+    - the same %name under another header is not a match
+    - %name matches by name only, any trailing [path][line] pointer in x.bot is ignored
+    - no x.bot, no such parent header, or no such % child under it: stays on the .human line
   - // comment headers have no robot target
 - in a *.bot
   - a reference goes to its .bot header
   - cursor on a definition header goes to the code line in its [path][line]
   - cursor on a % child line goes to the code file and line in its trailing [path][line], same rule as a header
-  - a % in a *.human has no robot target, it only appears in *.bot
   - no pointer, or the file is missing: stays on the .bot header
 - the caller passes the parsed robot, the function does no file reading
 
@@ -312,11 +344,22 @@ $Node [./src/types.ts][29]
 - on open and on change: parse, lint, textDocument/publishDiagnostics
 - textDocument/definition -> @GoToDefinition
 - positions 0-based, per the lsp protocol
+- method signatures
+  - %onInitialize [./src/lsp/server.ts][27] // announces full text sync and definitionProvider
+  - %validate(doc: TextDocument): void [./src/lsp/server.ts][34] // parse the text, lint it with file info when the uri is a file:, publish the diagnostics
+    - lint line 1-based to lsp line 0-based, severity error or warning, code is the rule, source is onlyhuman
+  - %onDidOpen and %onDidChangeContent [./src/lsp/server.ts][60] // call validate on every open and change
+  - %onDefinition(params) [./src/lsp/server.ts][63] // for a *.bot try @GoToDefinition pointerAt first and open the code file at the pointer line when it exists
+    - otherwise call definitionAt, passing the sibling robot for a *.human and the import resolver, and answer with the robot, imported or current file
+    - answers null when there is no document or no location
 - vscode client in ./vscode starts the server for files *.human, and *.bot
 
 @Skill [./src/skill.ts][1]
 - source is the onlyhuman-skill/SKILL.md that ships inside the onlyhuman library, fixed in the library, not looked up from the user path
-  - %init(directory: string = ".", options?: InitSkillOptions): string [./src/skill.ts][13] // copy the library skill file into <directory>/onlyhuman-skill/SKILL.md, return the target path
+  - %initSkill(directory: string = ".", options?: InitSkillOptions): string [./src/skill.ts][13] // copy the library skill file into <directory>/onlyhuman-skill/SKILL.md, return the target path
+    - throws when the library file is missing, or when the target exists and options.force is not set
+    - creates the onlyhuman-skill directory when missing, then copies byte-for-byte
+  - %InitSkillOptions [./src/skill.ts][6] // force?: boolean, allow replacing an existing target
   - the source path is resolved from the library's own location, e.g. import.meta.url, never from <directory> or the current directory
   - onlyhuman-skill/SKILL.md is listed in package.json files so it is present after npm i
   - fail with a clear error when the library skill file cannot be found
@@ -337,8 +380,14 @@ $Node [./src/types.ts][29]
 - @GoToDefinition
 - @Linter
 - @Skill
+- method signatures
+  - %main(argv: string[]): number [./src/cli.ts][29] // dispatch lint, def and skill init, returns the exit code, prints the usage and returns 2 on a bad command
+  - %load(file: string): Parsed [./src/cli.ts][25] // read the file as utf-8 and parseText it
+  - %notFound(what: string): number [./src/cli.ts][99] // print "no definition for <what>" to stderr and return 1
 - onlyhuman skill init
   - %skillInit [./src/cli.ts][32] // parse the command and call initSkill
+    - at most one directory argument, more than one prints the usage and returns 2
+    - an initSkill error is printed to stderr and returns 1, success prints "created <path>" and returns 0
   - copy the library skill file as is to onlyhuman-skill/SKILL.md under the given directory
   - create onlyhuman-skill when missing
   - fail if the library skill file is missing
@@ -363,13 +412,13 @@ $Node [./src/types.ts][29]
 // 2. @Highlighter has no executable methods, so its method signatures are the TextMate grammar rules and scopes; if you expect functions there, say so
 // 3. @Highlighter "each token type gets its own color" means a distinct TextMate scope per token type; the editor theme maps scopes to actual colors
 // 4. "published to the marketplace" is a release requirement; the robot prepares and verifies the .vsix and asks before publishing, because publishing is a public, human-authorized step
-// 5. development uses Node >= 22.18; the bundled server targets the Node runtime shipped with VS Code, and esbuild targets node18
+// 5. development uses Node >= 22.18; the bundled server targets the Node runtime shipped with VS Code, and the CLI bundle targets node20
 // 6. in a *.bot, go-to-definition on a header or % line goes to its code pointer, not back to the .human header; the .human definition remains the source of intent
 // 7. npm.sh uses a project-local .npm-cache so the publish flow does not depend on the state of the global npm cache
 // 8. the CLI bundle uses esbuild and targets Node 20 even though development uses Node 22.18; the source-TypeScript alternative keeps Node >=22.18
 // 9. package name availability is not checked until publish; the current name is onlyhuman and the scoped fallback is "@benjit87/onlyhuman"
 // 10. the npm package exports only the CLI; the parser API remains internal until the human asks for it
-// 11. # version control applies 0.6.0 to package.json, vscode/package.json and both lockfiles
+// 11. # version control applies 0.7.0 to package.json, vscode/package.json and both lockfiles
 // 12. @Skill is exposed as onlyhuman skill init and writes onlyhuman-skill/SKILL.md under the given directory
 // 13. skill init refuses to overwrite an existing onlyhuman-skill/SKILL.md unless --force is passed
 // 14. @Skill in spec.human has no flow line now; --force, create-directory and print-path behaviour are kept from the previous spec as details
@@ -386,4 +435,14 @@ $Node [./src/types.ts][29]
 // 25. imports are one level only, so no cycle rule is needed; transitive imports and cycle detection are left out
 // 26. a local definition with the same name as an imported one wins and is not reported as a duplicate
 // 27. go-to-definition on a reference to an imported name jumps to the imported file; the human only wrote "import file.human, goes to the target file", so this is an extension
-// 28. new method pointers [path][line] for %importAt, %import and unresolved-import are filled after coding, since the code does not exist yet
+// 28. the method pointers for %importAt and the unresolved-import rule were checked against the code on this regen and resolve to existing lines
+// 29. spec.human lines 52 and 103 spell "definations"; read as "definitions", fix the spelling in spec.human if unintended
+// 30. a % child line in a *.human is matched to a % child of the same name under the same parent header in the *.bot, not globally, since one name can appear under several headers
+// 31. when the *.bot has no matching % child, go-to-definition stays on the .human line, same as for headers
+// 32. % stays a child-line token only, never a header, so the linter and PREFIXES are unchanged
+// 33. the % child rule is implemented in definitionAt through methodAt and robotMethod, with a test in tests/core.test.ts; pointers were updated after coding
+// 34. "a % in a *.human has no robot target" from the previous bot is removed, it is superseded by the new % child line rule
+// 35. version 0.7.0 was applied on approve to package.json, vscode/package.json and both lockfiles, only the package's own version lines, not dependency versions
+// 36. "describe every method under each service name in details via %" is read as: every exported method of a service gets a % child line with a short detail list; private helpers are listed only for @GoToDefinition because the new % rule lives in them
+// 37. @Highlighter has no methods, so its % lines are its grammar rules, which already carry their scope and what they match
+// 38. the fs helpers in src/files.ts are shared by @LSP and @CLI but belong to no service in spec.human, so they are not listed as service methods

@@ -1,6 +1,6 @@
 ---
 name: onlyhuman
-description: "Write and maintain onlyhuman specs, a descriptive language where the human writes *.human (intent, human-edited only) and the agent writes the matching *.bot (detailed spec) under the spec folder. Use when the user mentions *.human or *.bot files, says regenerate or regen, wants a spec written and reviewed before implementation, or wants to initialize a project skill."
+description: "Write, review and maintain onlyhuman specs, a descriptive language where the human writes *.human (concise, intent and semantically driven, with a few syntax prefixes for structure and composition) and the agent writes the matching *.bot (detailed spec) under the spec folder. Use when the user mentions *.human or *.bot files, says regenerate, regen or approve, wants a spec reviewed or written before implementation, or wants to initialize a project skill."
 ---
 
 # introduction
@@ -11,17 +11,21 @@ description: "Write and maintain onlyhuman specs, a descriptive language where t
 - search for specs only under the spec/ folder
 
 # requirement
-- *.human is only to be editable by human
-- grill the human when something is ambiguous or wrong
+- *.human is edited by the human only, the agent never writes to it
+  - to help, list choices of replacement lines for the human review and for you to replace
+  - grill the human when something is ambiguous or wrong
   - ask before generating, if the human says go ahead anyway list the assumptions at the end of the .bot
-- say regenerate or regen to regenerate *.bot from the current *.human
-- say approve to implement the reviewed *.bot
 - a line with no leading - must start with a prefix
 
-# .human definition
-- @ prefix = service
-- ? prefix = state
-- $ prefix = entity
+# command
+- say regenerate or regen to regenerate *.bot from the current *.human
+- say approve to implement the reviewed *.bot
+
+# syntax definition for both .human and .bot
+- @ prefix variable = service / class
+- ? prefix variable = state
+- $ prefix variable = entity / data
+- % prefix = method or intent or details, written on a child line (- %name), never as a header
 - "//" prefix = user comment, can be a note or an instruction
 - "#" prefix = user requirement statement
 - "->" = logic flow
@@ -36,18 +40,19 @@ description: "Write and maintain onlyhuman specs, a descriptive language where t
 - a prefix header must not be followed by another prefix header without at least one child line between them; blank lines do not count
   - invalid: `#1` then `#2`
   - valid: `#1` then `- detail` then `#2`
-- `import <file>.human` on its own line, bare or as a child (`- import <file>.human`), makes every definition of that spec under spec/ count as defined here
+
+# .human definition
+- `import <file>.human` on its own line, bare or as a child (`- import <file>.human`), imports every @,?,$ definition of that spec under spec/
   - exactly one file name after import, no `*`; anything else on the line means it is plain text, not an import
   - one level only, the imported spec's own imports are not followed
   - a local definition with the same name wins
+  - % should not be imported
 
 # .bot definition
-- *.bot uses the same syntax as *.human, with more detail
 - *.bot is a detailed, concise version of *.human for the human to review
-- the % prefix marks a method or additional detail on a child line
 - implementation follows the semantic meaning of the human-written tokens
-- carry every prefix and symbol from *.human into *.bot
-- for each definition header, add a relative pointer to the implementing code line, e.g. [./example.txt][16]
+- carry every variable prefix and symbol from *.human into *.bot
+- for each prefix header, add a relative pointer to the implementing code line, e.g. [./example.txt][16]
   - the path is relative to the nearest folder containing .git; if none, the parent of the spec/ folder
   - update line numbers after coding
 - list assumptions at the end of *.bot when *.human leaves something open

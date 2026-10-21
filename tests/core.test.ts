@@ -190,3 +190,13 @@ test('go-to-definition in a robot: a % child line goes to its pointer', () => {
   assert.equal(pointerAt(robot, 2, 5)?.line, 5) // on the name
   assert.equal(pointerAt(robot, 2, 40), undefined) // elsewhere on the line
 })
+
+test('go-to-definition: a % child line in a .human jumps to the same % child under the same header in the robot', () => {
+  const human = parseText('@A\n- %run\n\n@B\n- %run\n- %only\n')
+  const robot = parseText('@A [./src/a.ts][3]\n- %run [./src/a.ts][5]\n\n@B [./src/b.ts][9]\n  - note\n- %run [./src/b.ts][11]\n')
+  assert.deepEqual(definitionAt(human, 2, 2, robot), { line: 2, col: 2, length: 4, file: 'robot' }) // on the name
+  assert.deepEqual(definitionAt(human, 5, 3, robot), { line: 6, col: 2, length: 4, file: 'robot' }) // same name under @B, not @A
+  // no robot, or no such % child under that header: stay on the .human line
+  assert.deepEqual(definitionAt(human, 5, 3), { line: 5, col: 2, length: 4 })
+  assert.deepEqual(definitionAt(human, 6, 3, robot), { line: 6, col: 2, length: 5 })
+})
