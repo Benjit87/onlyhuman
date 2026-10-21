@@ -3,9 +3,10 @@
 - implementation is in typescript
 - [path][line] numbers are targets and get updated after coding.
 - @Linter, @GoToDefinition and @Highlighter work on *.bot as well as *.human
+- describe every method under each service name in details via %
 
 # version control
-- version: 0.6.0
+- version: 0.7.0
 - update for all modules
   - vscode/package.json
   - package.json
@@ -73,6 +74,7 @@ $Tokens
 - provide relevant method signatures with some explaination
 - single .human file plus its sibling *.bot only
 - on a definition header of $,@,?,# go to the same header in the *.bot
+- on a % child line go to the same % child line under the same header in the *.bot
 - for % in *.bot it means go to the code file and line
 - if no *.bot or header, stay on the definition
 - parethnesis like () is ignored ( e.g '(?Parser)' ) the go to definition sould work

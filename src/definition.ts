@@ -109,6 +109,7 @@ function symbolAt(parsed: Parsed, line: number, col: number): SymbolRef | undefi
 // line 1-based, col 0-based. Cursor on either the prefix or the name resolves the symbol.
 // A reference goes to its header in the same file. In a .human, a definition header goes on to
 // the same header in the sibling .bot, when one is passed and has it, else it stays put.
+// A % child line goes on to the same % child under the same header in the .bot, else it stays put.
 export function definitionAt(
   parsed: Parsed,
   line: number,
@@ -122,6 +123,11 @@ export function definitionAt(
     const ref = importsOf(parsed).find((r) => r.name === imported && r.token.line === line)!
     if (resolveImport?.(imported)) return { line: 1, col: 0, length: 1, importFile: imported }
     return { line, col: ref.token.col, length: ref.token.length }
+  }
+  const method = methodAt(parsed, line, col)
+  if (method) {
+    const target = robot && robotMethod(parsed, method.node, robot, method.name)
+    return target ? { ...target, file: 'robot' } : method.location
   }
   const requirement = requirementAt(parsed, line, col)
   if (requirement) {
@@ -140,6 +146,42 @@ export function definitionAt(
   for (const ref of importsOf(parsed)) {
     const target = findDefinition(resolveImport(ref.name) ?? { roots: [], nodes: [], tokens: [] }, sym.key)
     if (target) return { ...target, importFile: ref.name }
+  }
+  return undefined
+}
+
+// a % child line, with the cursor on the % or its name
+function methodAt(parsed: Parsed, line: number, col: number) {
+  const node = parsed.nodes.find((n) => n.kind === 'child' && n.line === line && n.token?.kind === 'percent')
+  const percent = node?.token
+  if (!node || !percent) return undefined
+  const word = node.tokens.find((t) => t.kind === 'word' && t.line === line && t.col === percent.col + 1)
+  if (!word || col < percent.col || col > word.col + word.length) return undefined
+  return { node, name: word.text, location: { line, col: percent.col, length: 1 + word.length } }
+}
+
+// the key of a header node, prefix + name or # + requirement text, same as findDefinition uses
+function headerKey(node: Node): string | undefined {
+  const first = node.tokens[0]
+  if (first?.kind !== 'prefix') return undefined
+  if (first.text === '#') return requirementHeader(node)?.key
+  const name = node.tokens[1]
+  return name?.kind === 'word' && name.line === first.line && name.col === first.col + 1 ? first.text + name.text : undefined
+}
+
+// the same % child under the same header in the robot, matched by name, any pointer is ignored
+function robotMethod(parsed: Parsed, node: Node, robot: Parsed, name: string): Location | undefined {
+  let header = node
+  while (header.parent) header = header.parent
+  const key = header.kind === 'header' ? headerKey(header) : undefined
+  const target = key && robot.roots.find((r) => r.kind === 'header' && headerKey(r) === key)
+  if (!target) return undefined
+  const stack = [...target.children]
+  for (let n = stack.shift(); n; n = stack.shift()) {
+    const percent = n.token
+    const word = percent?.kind === 'percent' ? n.tokens.find((t) => t.kind === 'word' && t.col === percent.col + 1) : undefined
+    if (percent && word?.text === name) return { line: n.line, col: percent.col, length: 1 + word.length }
+    stack.unshift(...n.children)
   }
   return undefined
 }
