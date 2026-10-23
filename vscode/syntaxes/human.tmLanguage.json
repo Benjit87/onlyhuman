@@ -6,6 +6,9 @@
     { "include": "#import" },
     { "include": "#comment" },
     { "include": "#requirement" },
+    { "include": "#alias-qualified-entity" },
+    { "include": "#alias-qualified-state" },
+    { "include": "#alias-qualified" },
     { "include": "#entity" },
     { "include": "#state" },
     { "include": "#service" },
@@ -19,10 +22,34 @@
   ],
   "repository": {
     "import": {
-      "match": "^([ ]*(?:-[ ]+)?)(import)(?=[ ]+(?!//)[^\\s*]+(?:[ ]+//.*)?[ ]*$)",
+      "match": "^([ ]*(?:-[ ]+)?)(import)[ ]+((?!//)[^\\s*]+)(?:[ ]+(as)[ ]+(@\\w+))?(?=(?:[ ]+//.*)?[ ]*$)",
       "captures": {
         "1": { "patterns": [{ "match": "-", "name": "punctuation.definition.list.begin.human" }] },
-        "2": { "name": "keyword.control.import.human" }
+        "2": { "name": "keyword.control.import.human" },
+        "3": { "name": "string.unquoted.word.human" },
+        "4": { "name": "string.unquoted.word.human" },
+        "5": { "name": "variable.other.alias.human" }
+      }
+    },
+    "alias-qualified-entity": {
+      "match": "(?<![\\w@$?#])(@\\w+)(\\.\\$\\w+)",
+      "captures": {
+        "1": { "name": "variable.other.alias.human" },
+        "2": { "name": "entity.name.type.human" }
+      }
+    },
+    "alias-qualified-state": {
+      "match": "(?<![\\w@$?#])(@\\w+)(\\.\\?\\w+)",
+      "captures": {
+        "1": { "name": "variable.other.alias.human" },
+        "2": { "name": "variable.other.constant.human" }
+      }
+    },
+    "alias-qualified": {
+      "match": "(?<![\\w@$?#])(@\\w+)(\\.\\w+)",
+      "captures": {
+        "1": { "name": "variable.other.alias.human" },
+        "2": { "name": "entity.name.function.human" }
       }
     },
     "comment": {

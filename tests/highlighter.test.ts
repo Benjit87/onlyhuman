@@ -5,29 +5,28 @@ import { test } from 'node:test'
 const grammar = JSON.parse(readFileSync(new URL('../vscode/syntaxes/human.tmLanguage.json', import.meta.url), 'utf8'))
 const repo = grammar.repository
 
-// minimal textmate emulation for one line: leftmost match wins, ties go to pattern order
+// minimal textmate emulation for one line: leftmost match wins, ties go to pattern order.
+// A rule with captures scopes every named capture in order, an unnamed capture (the bullet) is skipped.
 function scopes(line: string): string[] {
   const rules = grammar.patterns.map((p: { include: string }) => repo[p.include.slice(1)])
   const out: string[] = []
   let pos = 0
   while (pos < line.length) {
-    let best: { start: number; end: number; name: string; value: string } | undefined
+    let best: { start: number; end: number; segs: { name: string; value: string }[] } | undefined
     for (const r of rules) {
       let start = -1
       let end = -1
-      let value = ''
-      let name = r.name
+      let segs: { name: string; value: string }[] = []
       if (r.match) {
         const re = new RegExp(r.match, 'g')
         re.lastIndex = pos
         const m = re.exec(line)
         if (m) {
           ;[start, end] = [m.index, m.index + m[0].length]
-          value = m[0]
-          if (r.captures?.['2'] && m[2]) {
-            name = r.captures['2'].name
-            value = m[2]
-          }
+          const named = Object.entries(r.captures ?? {}).filter(([i, c]) => (c as { name?: string }).name && m[Number(i)])
+          segs = named.length
+            ? named.map(([i, c]) => ({ name: (c as { name: string }).name, value: m[Number(i)] }))
+            : [{ name: r.name, value: m[0] }]
         }
       } else {
         const b = new RegExp(r.begin, 'g')
@@ -38,13 +37,13 @@ function scopes(line: string): string[] {
           e.lastIndex = m.index + m[0].length
           const em = e.exec(line)
           ;[start, end] = [m.index, em ? em.index : line.length]
-          value = line.slice(start, end)
+          segs = [{ name: r.name, value: line.slice(start, end) }]
         }
       }
-      if (start >= 0 && (!best || start < best.start)) best = { start, end: Math.max(end, start + 1), name, value }
+      if (start >= 0 && (!best || start < best.start)) best = { start, end: Math.max(end, start + 1), segs }
     }
     if (!best) break
-    out.push(`${best.name.replace(/\.human$/, '')}:${best.value}`)
+    for (const seg of best.segs) out.push(`${seg.name.replace(/\.human$/, '')}:${seg.value}`)
     pos = best.end
   }
   return out
@@ -107,4 +106,26 @@ test('import is a keyword only as the first word, with exactly one file name', (
     'string.unquoted.word:import',
     'string.unquoted.word:b.human',
   ])
+})
+
+test('import with as @alias, and qualified names', () => {
+  assert.deepEqual(scopes('import a.human as @b'), [
+    'keyword.control.import:import',
+    'string.unquoted.word:a.human',
+    'string.unquoted.word:as',
+    'variable.other.alias:@b',
+  ])
+  assert.deepEqual(scopes('- import a.human as @b // why'), [
+    'keyword.control.import:import',
+    'string.unquoted.word:a.human',
+    'string.unquoted.word:as',
+    'variable.other.alias:@b',
+    'comment.line.double-slash:// why',
+  ])
+  assert.deepEqual(scopes('import a.human as b'), ['string.unquoted.word:import', 'string.unquoted.word:a.human', 'string.unquoted.word:as', 'string.unquoted.word:b'])
+  assert.deepEqual(scopes('@b.Api'), ['variable.other.alias:@b', 'entity.name.function:.Api'])
+  assert.deepEqual(scopes('$b.Order'), ['entity.name.type:$b']) // only an @ alias qualifies
+  assert.deepEqual(scopes('@b.$Order'), ['variable.other.alias:@b', 'entity.name.type:.$Order'])
+  assert.deepEqual(scopes('@b.?State'), ['variable.other.alias:@b', 'variable.other.constant:.?State'])
+  assert.deepEqual(scopes('@Api'), ['entity.name.function:@Api'])
 })

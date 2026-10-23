@@ -1,6 +1,7 @@
 // @LSP: stdio language server for *.human and *.bot. Needs vscode-languageserver (see package.json).
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import {
+  CompletionItemKind,
   createConnection,
   DiagnosticSeverity,
   ProposedFeatures,
@@ -8,6 +9,7 @@ import {
   TextDocumentSyncKind,
 } from 'vscode-languageserver/node.js'
 import { TextDocument } from 'vscode-languageserver-textdocument'
+import { completeAt } from '../autocomplete.ts'
 import { definitionAt, pointerAt } from '../definition.ts'
 import {
   importPathFor,
@@ -28,6 +30,7 @@ connection.onInitialize(() => ({
   capabilities: {
     textDocumentSync: TextDocumentSyncKind.Full,
     definitionProvider: true,
+    completionProvider: { triggerCharacters: ['@', '$', '?', '.'] },
   },
 }))
 
@@ -89,6 +92,26 @@ connection.onDefinition((params) => {
       end: { line: loc.line - 1, character: loc.col + loc.length },
     },
   }
+})
+
+const COMPLETION_KIND = {
+  alias: CompletionItemKind.Module,
+  service: CompletionItemKind.Function,
+  entity: CompletionItemKind.Struct,
+  state: CompletionItemKind.Constant,
+}
+
+connection.onCompletion((params) => {
+  const doc = documents.get(params.textDocument.uri)
+  if (!doc) return []
+  const path = doc.uri.startsWith('file:') ? fileURLToPath(doc.uri) : undefined
+  const items = completeAt(
+    parseText(doc.getText()),
+    params.position.line + 1,
+    params.position.character,
+    path ? importResolver(path) : undefined,
+  )
+  return items.map((it) => ({ label: it.label, kind: COMPLETION_KIND[it.kind], detail: it.source }))
 })
 
 documents.listen(connection)

@@ -1,23 +1,16 @@
 #implementation
 - a parser for onlyhuman skill syntax
+- do not call onlyhuman cli as this project is about creating it, only read in onlyhuman-skill/SKILL.md
 - implementation is in typescript
 - [path][line] numbers are targets and get updated after coding.
 - @Linter, @GoToDefinition and @Highlighter work on *.bot as well as *.human
 - describe every method under each service name in details via %
 
 # version control
-- version: 0.7.0
+- version: 0.8.0
 - update for all modules
   - vscode/package.json
   - package.json
-
-#vscode deployment
-- package as a .vsix, installed with code --install-extension
-- bundle the server and client with esbuild into vscode/dist
-- the server runs on the node that comes with vscode
-- publisher is benjit87
-- published to the marketplace
-- provide a bash script to install locally
 
 # npm package for cli
 - package for pushing to npm repository
@@ -50,7 +43,11 @@ $Token
 - -
 - word // a // inside quotes e.g "//" is a word, not a comment
 - % // attach to the name, e.g %tokenize, no space
-- "import" // "import *.human" import all definations, starts in a new line
+- "import"
+  - "import module.human as @<alias>" // the @ is required, a bare alias is plain text
+  - "@alias.api_service" // refers to @api_service of module.human, an alias is a qualifier that calls its service
+  - "@alias.$Name" // a $ or ? name of module.human, the prefix after the dot picks the kind, no prefix means @
+  - @<alias> // an @ definition, so it is unused-definition and duplicate-definition checked
 
 $Node
 - $Token // the token of this line
@@ -79,6 +76,9 @@ $Tokens
 - if no *.bot or header, stay on the definition
 - parethnesis like () is ignored ( e.g '(?Parser)' ) the go to definition sould work
 - import file.human , goes to the target file
+- @<alias> or the file name in an import goes to the target file
+- "@alias.api_service" goes to "@api_service" in the target file
+- @<alias> reference goes to the import line
 
 @Highlighter
 - provide relevant method signatures with some explaination
@@ -94,6 +94,12 @@ $Tokens
 - -
 - %
 - "import"
+- @<alias> // own color, after as and in "@alias.name"
+
+@AutoComplete
+- triggers on @ and on "@alias."
+- offer the @<alias> of this spec's imports, then the @ $ ? names of the imported spec
+- works in *.human and *.bot
 
 @Linter
 - provide relevant method signatures with some explaination
@@ -102,11 +108,13 @@ $Tokens
 - [path][line] target must exist, warning if the file or line is missing
 - [path] is relative to the folder that holds .git or the parent of spec folder
 - missing-human, same as missing-robot, for *.bot
-- import *.human import all relevant definations
+- import <file>.human as @<alias> imports under the alias, references must be "@alias.name"
+- import <file>.human imports every definition unqualified
 
 @LSP
 - @GoToDefinition
 - @Linter
+- @AutoComplete
 
 @Skill
 - source is the onlyhuman-skill/SKILL.md that ships inside the onlyhuman library, fixed in the library, not looked up from the user path
