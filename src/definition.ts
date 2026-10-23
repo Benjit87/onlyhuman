@@ -3,20 +3,39 @@ import type { Location, Node, Parsed, Token } from './types.ts'
 import { SYMBOL_PREFIXES } from './types.ts'
 
 export interface SymbolRef {
-  key: string // prefix + name, e.g $Token
-  location: Location // covers prefix + name
-  isDefinition: boolean
+  key: string // prefix + name, e.g $Token; for a qualified reference the key in the imported spec, e.g @Api or $Order
+  location: Location // covers prefix + name, or prefix + alias + . + name when qualified
+  isDefinition: boolean // a header, or the @alias of an import line
+  qualifier?: string // the import alias of a qualified reference, e.g module in @module.Api
 }
+
+const QUALIFIED_RE = /^\.([$?]?)([A-Za-z0-9_]+)/ // .name is @name, .$name and .?name pick the kind
 
 export function collectSymbols(parsed: Parsed): SymbolRef[] {
   const out: SymbolRef[] = []
   const toks = parsed.tokens
+  const aliasPrefixes = new Set(importsOf(parsed).flatMap((r) => r.aliasPrefix ?? []))
   for (let i = 0; i < toks.length; i++) {
     const p = toks[i]
     if (p.kind !== 'prefix' || !SYMBOL_PREFIXES.includes(p.text)) continue
     const name = toks[i + 1]
     if (!name || name.kind !== 'word' || name.line !== p.line || name.col !== p.col + 1) continue
-    const isDefinition = parsed.nodes.some((n) => n.kind === 'header' && n.token === p)
+    // @alias.name: the word glued right after the name starts with a dot and a name
+    const next = toks[i + 2]
+    const q =
+      p.text === '@' && next && next.kind === 'word' && next.line === p.line && next.col === name.col + name.text.length
+        ? QUALIFIED_RE.exec(next.text)
+        : null
+    if (q) {
+      out.push({
+        key: (q[1] || '@') + q[2],
+        location: { line: p.line, col: p.col, length: 1 + name.text.length + q[0].length },
+        isDefinition: false,
+        qualifier: name.text,
+      })
+      continue
+    }
+    const isDefinition = aliasPrefixes.has(p) || parsed.nodes.some((n) => n.kind === 'header' && n.token === p)
     out.push({
       key: p.text + name.text,
       location: { line: p.line, col: p.col, length: 1 + name.text.length },
@@ -29,23 +48,30 @@ export function collectSymbols(parsed: Parsed): SymbolRef[] {
 export interface ImportRef {
   name: string // file name as written, resolved under spec/
   token: Token // the file name word
+  alias?: string // the name after `as @`, its definitions are then referenced as @alias.name
+  aliasToken?: Token // the alias name word
+  aliasPrefix?: Token // the @ before it
 }
 
-// the file named by an import line
+// the file named by an import line, and its alias when it has `as alias`
 export function importOf(node: Node): ImportRef | undefined {
   const i = node.tokens.findIndex((t) => t.kind === 'import')
   const file = i === -1 ? undefined : node.tokens[i + 1]
-  return file ? { name: file.text, token: file } : undefined
+  if (!file) return undefined
+  const [as, at, alias] = node.tokens.slice(i + 2)
+  const aliased = as?.kind === 'word' && as.text === 'as' && at?.kind === 'prefix' && at.text === '@' && alias?.kind === 'word'
+  return aliased ? { name: file.text, token: file, alias: alias.text, aliasToken: alias, aliasPrefix: at } : { name: file.text, token: file }
 }
 
 export function importsOf(parsed: Parsed): ImportRef[] {
   return parsed.nodes.flatMap((n) => importOf(n) ?? [])
 }
 
-// cursor on the file name of an import line -> that file name
+// cursor on the file name, or on the alias, of an import line -> that file name
 export function importAt(parsed: Parsed, line: number, col: number): string | undefined {
   const ref = importsOf(parsed).find((r) => r.token.line === line)
-  return ref && col >= ref.token.col && col <= ref.token.col + ref.token.length ? ref.name : undefined
+  const on = (t?: Token) => !!t && col >= t.col && col <= t.col + t.length
+  return ref && (on(ref.token) || on(ref.aliasPrefix) || on(ref.aliasToken)) ? ref.name : undefined
 }
 
 export function findDefinition(parsed: Parsed, key: string): Location | undefined {
@@ -140,10 +166,19 @@ export function definitionAt(
     const target = findDefinition(robot, sym.key)
     if (target) return { ...target, file: 'robot' }
   }
+  if (sym.qualifier) {
+    // the @alias part goes to the import line that defines it
+    if (col <= sym.location.col + sym.qualifier.length) return findDefinition(parsed, '@' + sym.qualifier)
+    // the .name part goes to the header of name in the file imported as alias
+    const ref = importsOf(parsed).find((r) => r.alias === sym.qualifier)
+    const spec = ref && resolveImport?.(ref.name)
+    const target = spec && findDefinition(spec, sym.key)
+    return ref && target ? { ...target, importFile: ref.name } : undefined
+  }
   const local = findDefinition(parsed, sym.key)
   if (local || !resolveImport) return local
-  // a reference to an imported name goes to its header in the imported file
-  for (const ref of importsOf(parsed)) {
+  // a reference to an imported name goes to its header in the imported file, aliased imports only by alias.name
+  for (const ref of importsOf(parsed).filter((r) => !r.alias)) {
     const target = findDefinition(resolveImport(ref.name) ?? { roots: [], nodes: [], tokens: [] }, sym.key)
     if (target) return { ...target, importFile: ref.name }
   }

@@ -2,6 +2,7 @@
 import type { Token, TokenKind, Tokens } from './types.ts'
 
 const PREFIX_RE = /^([@$?#])([A-Za-z0-9_]*)(.*)$/
+export const ALIAS_RE = /^[A-Za-z0-9_]+$/
 const PERCENT_RE = /^%([A-Za-z0-9_]*)(.*)$/
 
 export function tokenize(text: string): Tokens {
@@ -77,11 +78,16 @@ export function tokenize(text: string): Tokens {
   return tokens
 }
 
-// `import x.human` as the first words of a line: import + exactly one file name (no *) + optional comment.
+// `import x.human` or `import x.human as @alias` as the first words of a line: import + exactly one file name (no *)
+// + optional `as` and one @alias (the @ is required) + optional comment.
 // Anything else, e.g. `import all the things` or `import *.human`, is plain words describing an import.
 function markImport(line: Token[]) {
-  const [keyword, file, ...tail] = line[0]?.kind === 'bullet' ? line.slice(1) : line
+  const [keyword, file, ...rest] = line[0]?.kind === 'bullet' ? line.slice(1) : line
   if (keyword?.kind !== 'word' || keyword.text !== 'import') return
   if (file?.kind !== 'word' || file.text.includes('*')) return
-  if (tail.every((t) => t.kind === 'comment' || t.kind === 'comment_sentence')) keyword.kind = 'import'
+  const [as, at, alias, ...tail] = rest
+  const aliased =
+    as?.kind === 'word' && as.text === 'as' && at?.kind === 'prefix' && at.text === '@' &&
+    alias?.kind === 'word' && alias.col === at.col + 1 && ALIAS_RE.test(alias.text)
+  if ((aliased ? tail : rest).every((t) => t.kind === 'comment' || t.kind === 'comment_sentence')) keyword.kind = 'import'
 }

@@ -6,6 +6,7 @@
 - language is TypeScript, development requires Node >= 22.18, strict mode
 - parser, linter and definition core are pure functions, no editor or fs dependency; @LSP and @CLI share them
 - @Linter, @GoToDefinition and @Highlighter work on *.bot as well as *.human
+- do not call the onlyhuman cli while building this project, it is what is being created; read onlyhuman-skill/SKILL.md for the rules, and check the work with npm test
 - layout
   - src/types.ts // $Token $Node $Tokens types
   - src/tokenizer.ts // $Data -> $Tokens
@@ -14,6 +15,7 @@
   - src/definition.ts // @GoToDefinition
   - src/files.ts // fs access for sibling files, project root, pointers and imported specs, used by @CLI and @LSP
   - src/lsp/server.ts // @LSP
+  - src/autocomplete.ts // @AutoComplete, a pure function used by @LSP
   - src/cli.ts // @CLI
   - src/skill.ts // @Skill copy operation
   - onlyhuman-skill/SKILL.md // Codex skill instructions and tooling
@@ -31,40 +33,10 @@
 - [path][line] numbers are targets and get updated after coding, applies to every header
 
 # version control [./package.json][1]
-- version 0.7.0 is applied to package.json and vscode/package.json
+- version 0.8.0 is applied to package.json and vscode/package.json
   - %vscodeManifest [./vscode/package.json][1] // keep the extension version aligned
 - package-lock.json and vscode/package-lock.json are in sync
 - bump the version before publishing the npm package or the .vsix
-
-#vscode deployment [./vscode/package.json][1]
-- package as a .vsix, installed with code --install-extension
-  - build: cd vscode, npm run build, then npx vsce package
-  - output: onlyhuman-vscode-<version>.vsix, version is 0.7.0 and is bumped per release
-  - install: code --install-extension onlyhuman-vscode-<version>.vsix
-- bundle the server and client with esbuild into vscode/dist
-  - vscode/dist/server.js // from src/lsp/server.ts, with vscode-languageserver bundled in
-  - vscode/dist/extension.js // from vscode/extension.js, with vscode-languageclient bundled in
-  - no src/, tests/ or node_modules/ ships, .vscodeignore excludes them, and .vscode/ and the build config
-  - main in vscode/package.json points to ./dist/extension.js
-- the server runs on the node that comes with vscode
-  - the client starts dist/server.js with `module`, not `command: node`, so no node install or version is needed on the user machine
-  - the server accepts both ipc and stdio, createConnection picks from the arguments, so the dev setup keeps working
-- publisher is benjit87
-  - package.json has the MIT license, repository https://github.com/Benjit87/onlyhuman, description and categories
-  - vscode/README.md is the listing page
-- published to the marketplace
-  - the publisher benjit87 must already exist on the marketplace
-  - publishing is done by the human with their own personal access token, the robot never asks for or sees the token
-  - the robot prepares everything up to a verified .vsix and stops, then asks before any publish step
-  - a publish is public, so confirm first that FPG policy allows it // see assumptions
-- provide a bash script to install locally
-  - vscode/install-local.sh runs from any working directory and resolves its own location
-  - requires a supported Node.js, npm and the VS Code code command
-  - installs dependencies, builds the bundles, packages the .vsix and installs it with code --install-extension
-  - exits with a nonzero status if any step fails
-- verify before handing over
-  - the .vsix contents are listed with npx vsce ls and contain only dist, package.json, README, LICENSE and the grammars
-  - the bundled server answers an lsp initialize and a definition request over ipc and stdio
 
 # npm package for cli [./package.json][1]
 - publish the CLI to the npm registry
@@ -146,7 +118,18 @@ $Token [./src/types.ts][16]
 - percent // %, marks a method or additional detail on a child line, never a header
   - attached to the name, e.g %tokenize, no space
   - the tokenizer emits it in any file, only the *.bot grammar highlights it
-- "import" // "import *.human" import all definations, starts in a new line
+- "import"
+  - "import module.human as @<alias>" // the @ is required, a bare alias is plain text
+    - as @<alias> gives the imported spec a local name; its definitions are then referenced as "@alias.api_service"
+    - the alias is the word after as, an @ followed by one word of letters, digits and underscore, no `.` in it
+    - an import with no as @<alias> stays the plain form, every definition counts as defined here unqualified
+  - "@alias.api_service" // refers to `@api_service` of module.human, the alias is a qualifier that calls its service
+    - tokenized as the prefix @, the word alias and the glued word .api_service, so go-to-definition and autocomplete can tell the two parts apart
+  - "@alias.$Name" // a `$` or `?` name of module.human, the prefix after the dot picks the kind, no prefix means @
+    - tokenized as the prefix @, the word alias and the glued word starting with a dot, then an optional $ or ? prefix, then the name
+    - "@alias.$Structure" refers to `$Structure` of module.human, "@alias.?Parsed" to `?Parsed`, "@alias.Api" to `@Api`
+    - # is not accepted after the dot, a requirement statement is not a name
+  - @<alias> // an @ definition made by the import line, see @Linter
   - import is a keyword token, only when it is the first word of a line, either bare or after a bullet, e.g `import backend.human` or `- import backend.human`
   - the next word is the file name, one file per line, resolved under the spec/ folder; a missing .human extension is not added
   - anywhere else on a line, or inside a comment_sentence, import is an ordinary word
@@ -174,7 +157,7 @@ $Node [./src/types.ts][29]
 - children // $Node list, defined by - bullets and indent
 - kind // header | child
 
-?Data [./src/tokenizer.ts][7]
+?Data [./src/tokenizer.ts][8]
 - $Data
 
 ?Parsed [./src/types.ts][40]
@@ -189,7 +172,7 @@ $Node [./src/types.ts][29]
 - tokenize(text) returns $Tokens
 - parse(tokens) returns ?Parsed
 - method signatures
-  - %tokenize(text: string): Tokens [./src/tokenizer.ts][7]
+  - %tokenize(text: string): Tokens [./src/tokenizer.ts][8]
     - input is the whole file text, lf or crlf, blank lines are skipped
     - emits every $Token of a line in source order with line 1-based, col 0-based, length and the line indent
     - a // starts a comment_sentence only when it begins a space-separated run, an import is marked only as the first word of a line with exactly one file name
@@ -215,10 +198,22 @@ $Node [./src/types.ts][29]
 - definition = a header whose first token is $ ? or @ plus a name
 - reference = $ ? or @ plus a name anywhere outside a comment, names are case-sensitive and per prefix, so $Data != ?Data
 - the same rules run on *.human and *.bot
-- import *.human imports all relevant definitions
+- import <file>.human imports all relevant definitions
+  - import <file>.human as @<alias> imports them under the alias, references must be "@alias.name", see "qualified imports" below
   - every $ @ ? # definition of the imported spec counts as defined here, so undefined-reference does not fire on it
   - imported definitions are never reported as unused-definition, and a local definition with the same name wins, not a duplicate-definition
   - imports are one level only, the imported spec's own imports are not followed, so there are no cycles
+  - qualified imports
+    - a reference "@alias.api_service", with its prefix, counts as defined when the imported spec defines `@api_service`
+    - a reference "@alias.$Name" or "@alias.?Name" counts as defined when the imported spec defines `$Name` or `?Name`, the prefix after the dot picks the kind and none means @
+    - the key looked up in the imported spec is that prefix + name, so `$Name` never matches `@Name`
+    - the alias is an @ definition made by the import line, so a bare `@alias` anywhere also counts as a reference to it
+    - an alias that no "@alias.name" reference uses is an unused-definition warning, reported on the alias in the import line
+    - a qualified reference to a name the imported spec does not define is an undefined-reference
+    - a reference to an alias that no import declares is an undefined-reference
+    - the definitions of an aliased import are not defined unqualified, `@api_service` alone is an undefined-reference unless defined locally or by a plain import
+    - two imports with the same alias, or an alias equal to a local @ header name, is a duplicate-definition on the second
+    - `import a.human as be` without the @ is plain text, not an import, so it reports nothing as an import
 - file info, when the caller has it = path, whether the sibling exists, and a way to count lines of a pointed file, so the linter itself stays free of fs
 - rules
   - no-prefix // error: header line with no - and no prefix e.g `Parser`
@@ -246,33 +241,33 @@ $Node [./src/types.ts][29]
   - a line that is only one operator, e.g under $Token, it is a listing
   - quoted text like `"$Name"`, it is a word
 
-@GoToDefinition [./src/definition.ts][113]
+@GoToDefinition [./src/definition.ts][139]
 - (?Parsed, position) -> find token -> definition location
 - (?Parsed, name) -> definition location
 - name = prefix + name, e.g $Token
 - method signatures
-  - %collectSymbols(parsed: Parsed): SymbolRef[] [./src/definition.ts][11] // shared definition and reference scan, also used by @Linter
+  - %collectSymbols(parsed: Parsed): SymbolRef[] [./src/definition.ts][14] // shared definition and reference scan, also used by @Linter
     - returns one SymbolRef per attached $ @ ? prefix and name, with key, location and isDefinition
     - isDefinition is true only when the symbol is the first token of a header
-  - %findDefinition(parsed: Parsed, key: string): Location | undefined [./src/definition.ts][51] // by name, key = prefix + name
+  - %findDefinition(parsed: Parsed, key: string): Location | undefined [./src/definition.ts][77] // by name, key = prefix + name
     - a key starting with # matches the full requirement text, otherwise the first definition with that key wins
     - returns none when there is no such definition
-  - %definitionAt(parsed: Parsed, line: number, col: number, robot?: Parsed): Location | undefined [./src/definition.ts][113] // by position, in a *.human also a % child line to the same % child line in the robot
+  - %definitionAt(parsed: Parsed, line: number, col: number, robot?: Parsed): Location | undefined [./src/definition.ts][139] // by position, in a *.human also a % child line to the same % child line in the robot
     - order of checks: import file name, % child line, # header, then $ @ ? symbol
     - a definition header or % child goes to the robot when it is passed and has the match, a reference goes to its .human header, an unresolved reference tries the imported specs
     - the cursor in a comment returns none, the function does no file reading
-  - %importAt(parsed: Parsed, line: number, col: number): string | undefined [./src/definition.ts][46] // on the file name of an import line, returns that file name so the caller opens it at line 1
+  - %importAt(parsed: Parsed, line: number, col: number): string | undefined [./src/definition.ts][71] // on the file name of an import line, returns that file name so the caller opens it at line 1; the cursor on the alias after as does the same
     - returns none when the cursor is not on an import file name
-  - %pointerAt(parsed: Parsed, line: number, col: number): Pointer | undefined [./src/definition.ts][191] // in a *.bot, header or % line to its [path][line]
+  - %pointerAt(parsed: Parsed, line: number, col: number): Pointer | undefined [./src/definition.ts][226] // in a *.bot, header or % line to its [path][line]
     - the cursor must be on the % or its name for a % line, or on the definition name for a header
     - returns none when the line has no pointer, the caller checks that the file exists
-  - %parsePointer(token: Token): Pointer | undefined [./src/definition.ts][85] // parse the glued [path][line] word without reading the file
-  - %pointerOf(node: Node): Pointer | undefined [./src/definition.ts][91] // find the first pointer in a header or % child line
+  - %parsePointer(token: Token): Pointer | undefined [./src/definition.ts][111] // parse the glued [path][line] word without reading the file
+  - %pointerOf(node: Node): Pointer | undefined [./src/definition.ts][117] // find the first pointer in a header or % child line
     - returns the first token of the line that parses as [path][line], none if there is none
-  - %methodAt(parsed: Parsed, line: number, col: number) [./src/definition.ts][154] // private helper of definitionAt for the % child rule
+  - %methodAt(parsed: Parsed, line: number, col: number) [./src/definition.ts][189] // private helper of definitionAt for the % child rule
     - the cursor must be on the % or on the name glued to it, returns the node, the name and the location
-  - %headerKey(node: Node): string | undefined [./src/definition.ts][164] // private helper, prefix + name or # + requirement text of a header
-  - %robotMethod(parsed: Parsed, node: Node, robot: Parsed, name: string): Location | undefined [./src/definition.ts][173] // private helper, finds the same %name under the same top-level header in the robot, any pointer is ignored
+  - %headerKey(node: Node): string | undefined [./src/definition.ts][199] // private helper, prefix + name or # + requirement text of a header
+  - %robotMethod(parsed: Parsed, node: Node, robot: Parsed, name: string): Location | undefined [./src/definition.ts][208] // private helper, finds the same %name under the same top-level header in the robot, any pointer is ignored
 - found: returns line, col, length of the defining header
 - not found, or token is not an $ ? @ reference or an eligible header: returns none
 - parentheses around a prefixed symbol do not block navigation, e.g `(@Parser)` and `(?Parsed)` resolve on the symbol
@@ -282,6 +277,9 @@ $Node [./src/types.ts][29]
 - in a *.human
   - a reference goes to its .human header
   - a reference to an imported name goes to its header in the imported file
+  - a qualified reference "@alias.name", "@alias.$Name" or "@alias.?Name" goes to the matching header in the file imported as alias, when the cursor is on the dot part
+  - the cursor on the `@alias` part of "@alias.name", or on a bare @<alias> reference, goes to the import line that defines the alias
+  - cursor on the alias after as, or on the file name, goes to the imported file at line 1
   - import file.human, with the cursor on the file name, goes to the target file at line 1
   - if the target file is missing, stays on the import line
   - cursor on a definition header of $ @ ? or # goes to the matching header in x.bot
@@ -307,20 +305,22 @@ $Node [./src/types.ts][29]
 - *.bot gets the same grammar through its own language id
 - lexical only, no server needed, so it does not depend on @LSP or @CLI
 - method signatures // the highlighter is declarative; these are its grammar rules, one per token class
-  - %comment [./vscode/syntaxes/human.tmLanguage.json][28] // comment.line.double-slash.human, // to end of line
-  - %requirement [./vscode/syntaxes/human.tmLanguage.json][32] // markup.heading.human, # to end of line or comment
-  - %entity [./vscode/syntaxes/human.tmLanguage.json][37] // entity.name.type.human, $name
-  - %state [./vscode/syntaxes/human.tmLanguage.json][41] // variable.other.constant.human, ?name
-  - %service [./vscode/syntaxes/human.tmLanguage.json][45] // entity.name.function.human, @name
-  - %bare-prefix [./vscode/syntaxes/human.tmLanguage.json][49] // punctuation.definition.prefix.human, a prefix alone
-  - %arrow [./vscode/syntaxes/human.tmLanguage.json][53] // keyword.operator.arrow.human
-  - %plus [./vscode/syntaxes/human.tmLanguage.json][57] // keyword.operator.plus.human
-  - %equals [./vscode/syntaxes/human.tmLanguage.json][61] // keyword.operator.equals.human
-  - %bullet [./vscode/syntaxes/human.tmLanguage.json][65] // punctuation.definition.list.begin.human
-  - %dash [./vscode/syntaxes/human.tmLanguage.json][69] // punctuation.definition.dash.human
-  - %word [./vscode/syntaxes/human.tmLanguage.json][73] // string.unquoted.word.human
+  - %comment [./vscode/syntaxes/human.tmLanguage.json][55] // comment.line.double-slash.human, // to end of line
+  - %requirement [./vscode/syntaxes/human.tmLanguage.json][59] // markup.heading.human, # to end of line or comment
+  - %entity [./vscode/syntaxes/human.tmLanguage.json][64] // entity.name.type.human, $name
+  - %state [./vscode/syntaxes/human.tmLanguage.json][68] // variable.other.constant.human, ?name
+  - %service [./vscode/syntaxes/human.tmLanguage.json][72] // entity.name.function.human, @name
+  - %bare-prefix [./vscode/syntaxes/human.tmLanguage.json][76] // punctuation.definition.prefix.human, a prefix alone
+  - %arrow [./vscode/syntaxes/human.tmLanguage.json][80] // keyword.operator.arrow.human
+  - %plus [./vscode/syntaxes/human.tmLanguage.json][84] // keyword.operator.plus.human
+  - %equals [./vscode/syntaxes/human.tmLanguage.json][88] // keyword.operator.equals.human
+  - %bullet [./vscode/syntaxes/human.tmLanguage.json][92] // punctuation.definition.list.begin.human
+  - %dash [./vscode/syntaxes/human.tmLanguage.json][96] // punctuation.definition.dash.human
+  - %word [./vscode/syntaxes/human.tmLanguage.json][100] // string.unquoted.word.human
   - %percent [./vscode/syntaxes/robot.tmLanguage.json][10] // keyword.operator.percent.human, only in *.bot
-  - %import [./vscode/syntaxes/human.tmLanguage.json][21] // keyword.control.import.human, the word import as the first word of a line, in both grammars
+  - %alias-kind // "@alias.$Name" scopes the dot part as entity.name.type and "@alias.?Name" as variable.other.constant, the @alias part keeps the alias scope
+  - %alias [./vscode/syntaxes/human.tmLanguage.json][48] // variable.other.alias.human, the @alias after as and the @alias part of "@alias.name", a color of its own
+  - %import [./vscode/syntaxes/human.tmLanguage.json][24] // keyword.control.import.human, the word import as the first word of a line, in both grammars
 - each token type gets its own highlighting scope; the editor theme picks the actual colour
   - the $ name // entity.name.type
   - the ? name // variable.other.constant
@@ -331,25 +331,44 @@ $Node [./src/types.ts][29]
   - bullet and later dash // distinct punctuation scopes
   - percent // keyword.operator scope of its own, *.bot only
   - import // keyword.control scope, only as the first word of a line, any other import is a word
+  - @<alias> // own variable.other.alias scope, so the alias differs in color from other @ names
   - word // distinct word scope, theme decides its colour
   - comment_sentence // comment scope, shared with the comment marker because the entire comment is highlighted together
 - a bare prefix with no name gets the punctuation scope of its prefix
 - prefix colour covers prefix + name together, so references and definitions look the same
 - semantic highlighting (undefined names in a different colour) is not part of this, it would be a later step in @LSP
 
-@LSP [./src/lsp/server.ts][27]
+@AutoComplete [./src/autocomplete.ts][39]
+- the @<alias> in import statement must have autocomplete function
+- triggers on @ and on "@alias."
+- offer the @<alias> of this spec's imports, then the @ $ ? names of the imported spec
+- works in *.human and *.bot
+- method signatures
+  - %completeAt(parsed: Parsed, line: number, col: number, resolveImport?: (name: string) => Parsed | undefined): CompletionItem[] [./src/autocomplete.ts][39] // in src/autocomplete.ts, pure like @GoToDefinition, no fs
+    - after `@` alone, items are the aliases declared by the import lines, then the @ definitions of this spec
+    - after `$` or `?` alone, items are the definitions of that prefix in this spec
+    - after "@alias." items are the @ definitions of the spec imported as alias, name only, the prefix and alias are already typed
+    - after "@alias.$" items are the $ definitions and after "@alias.?" the ? definitions of that spec, name only
+    - no items in a comment_sentence, and none after "@alias." when the alias is unknown or its file is missing
+    - an item carries the label, the kind (alias, service, entity, state) and the file it comes from
+  - %onCompletion(params) [./src/lsp/server.ts][104] // in src/lsp/server.ts, calls completeAt with the import resolver for the file on disk
+    - %onInitialize announces completionProvider with the trigger characters @ $ ? and .
+
+@LSP [./src/lsp/server.ts][29]
 - @GoToDefinition
 - @Linter
+- @AutoComplete
 - transport ipc or stdio, library vscode-languageserver, full text sync
 - on open and on change: parse, lint, textDocument/publishDiagnostics
 - textDocument/definition -> @GoToDefinition
+- textDocument/completion -> @AutoComplete
 - positions 0-based, per the lsp protocol
 - method signatures
-  - %onInitialize [./src/lsp/server.ts][27] // announces full text sync and definitionProvider
-  - %validate(doc: TextDocument): void [./src/lsp/server.ts][34] // parse the text, lint it with file info when the uri is a file:, publish the diagnostics
+  - %onInitialize [./src/lsp/server.ts][29] // announces full text sync, definitionProvider and completionProvider
+  - %validate(doc: TextDocument): void [./src/lsp/server.ts][37] // parse the text, lint it with file info when the uri is a file:, publish the diagnostics
     - lint line 1-based to lsp line 0-based, severity error or warning, code is the rule, source is onlyhuman
-  - %onDidOpen and %onDidChangeContent [./src/lsp/server.ts][60] // call validate on every open and change
-  - %onDefinition(params) [./src/lsp/server.ts][63] // for a *.bot try @GoToDefinition pointerAt first and open the code file at the pointer line when it exists
+  - %onDidOpen and %onDidChangeContent [./src/lsp/server.ts][63] // call validate on every open and change
+  - %onDefinition(params) [./src/lsp/server.ts][66] // for a *.bot try @GoToDefinition pointerAt first and open the code file at the pointer line when it exists
     - otherwise call definitionAt, passing the sibling robot for a *.human and the import resolver, and answer with the robot, imported or current file
     - answers null when there is no document or no location
 - vscode client in ./vscode starts the server for files *.human, and *.bot
@@ -411,14 +430,14 @@ $Node [./src/types.ts][29]
 // 1. @GoToDefinition, @Highlighter and @Linter list their public method or grammar-rule signatures with brief explanations; private helpers are omitted
 // 2. @Highlighter has no executable methods, so its method signatures are the TextMate grammar rules and scopes; if you expect functions there, say so
 // 3. @Highlighter "each token type gets its own color" means a distinct TextMate scope per token type; the editor theme maps scopes to actual colors
-// 4. "published to the marketplace" is a release requirement; the robot prepares and verifies the .vsix and asks before publishing, because publishing is a public, human-authorized step
+// 4. the vscode deployment section moved to vscode.human; its generated spec and assumptions are in vscode.bot
 // 5. development uses Node >= 22.18; the bundled server targets the Node runtime shipped with VS Code, and the CLI bundle targets node20
 // 6. in a *.bot, go-to-definition on a header or % line goes to its code pointer, not back to the .human header; the .human definition remains the source of intent
 // 7. npm.sh uses a project-local .npm-cache so the publish flow does not depend on the state of the global npm cache
 // 8. the CLI bundle uses esbuild and targets Node 20 even though development uses Node 22.18; the source-TypeScript alternative keeps Node >=22.18
 // 9. package name availability is not checked until publish; the current name is onlyhuman and the scoped fallback is "@benjit87/onlyhuman"
 // 10. the npm package exports only the CLI; the parser API remains internal until the human asks for it
-// 11. # version control applies 0.7.0 to package.json, vscode/package.json and both lockfiles
+// 11. # version control applies 0.8.0 to package.json, vscode/package.json and both lockfiles
 // 12. @Skill is exposed as onlyhuman skill init and writes onlyhuman-skill/SKILL.md under the given directory
 // 13. skill init refuses to overwrite an existing onlyhuman-skill/SKILL.md unless --force is passed
 // 14. @Skill in spec.human has no flow line now; --force, create-directory and print-path behaviour are kept from the previous spec as details
@@ -436,13 +455,40 @@ $Node [./src/types.ts][29]
 // 26. a local definition with the same name as an imported one wins and is not reported as a duplicate
 // 27. go-to-definition on a reference to an imported name jumps to the imported file; the human only wrote "import file.human, goes to the target file", so this is an extension
 // 28. the method pointers for %importAt and the unresolved-import rule were checked against the code on this regen and resolve to existing lines
-// 29. spec.human lines 52 and 103 spell "definations"; read as "definitions", fix the spelling in spec.human if unintended
+// 29. spec.human lines 45 and 97 spell "definations"; read as "definitions", fix the spelling in spec.human if unintended
 // 30. a % child line in a *.human is matched to a % child of the same name under the same parent header in the *.bot, not globally, since one name can appear under several headers
 // 31. when the *.bot has no matching % child, go-to-definition stays on the .human line, same as for headers
 // 32. % stays a child-line token only, never a header, so the linter and PREFIXES are unchanged
 // 33. the % child rule is implemented in definitionAt through methodAt and robotMethod, with a test in tests/core.test.ts; pointers were updated after coding
 // 34. "a % in a *.human has no robot target" from the previous bot is removed, it is superseded by the new % child line rule
-// 35. version 0.7.0 was applied on approve to package.json, vscode/package.json and both lockfiles, only the package's own version lines, not dependency versions
+// 35. version 0.7.0 was applied on an earlier approve, 0.8.0 was applied on this one to package.json, vscode/package.json and both lockfiles, only the package's own version lines, not dependency versions
 // 36. "describe every method under each service name in details via %" is read as: every exported method of a service gets a % child line with a short detail list; private helpers are listed only for @GoToDefinition because the new % rule lives in them
 // 37. @Highlighter has no methods, so its % lines are its grammar rules, which already carry their scope and what they match
 // 38. the fs helpers in src/files.ts are shared by @LSP and @CLI but belong to no service in spec.human, so they are not listed as service methods
+// 39. spec.human no longer has the "import core.human" line; the earlier unresolved import is gone, so spec.bot carries no import
+// 40. the #vscode deployment section is no longer in spec.human, so it was removed from this file; it now lives in vscode.human and vscode.bot
+// 41. the layout list under #implementation still names the vscode/ files, since spec.human still says the implementation lives in those paths
+// 42. no code changed in this regen, so the [path][line] pointers were kept; lint checks that they still resolve
+// 43. the human wrote the alias as `as @<alias>` and the @ is required; `as be` without the @ is plain text, not an import
+// 44. "an alias is a qualifier that calls its service" is read as: a name of the imported spec is called as "@alias.name", e.g "@alias.api_service" calls `@api_service`
+// 45. the human did not say whether an aliased import also imports names unqualified; read as no, they are only reachable as "@alias.name"
+// 46. @<alias> is an @ definition made by the import line, not a header, so it is checked for unused-definition and duplicate-definition, and a bare @alias counts as a reference to it
+// 47. the plain import <file>.human stays as in the previous regen; spec.human line "import <file>.human imports every definition unqualified" confirms it
+// 48. an unknown alias, a missing name under an alias, and a duplicate alias use the existing undefined-reference and duplicate-definition rules, no new rule was added
+// 49. imports stay one level only, an aliased import does not make the imported spec's own imports available
+// 50. an alias is @ plus one word of letters, digits and underscore; `import a.human as @` with no word, a dotted alias or extra words is plain text
+// 51. @<alias> gets its own TextMate scope variable.other.alias.human after as and in "@alias.name"; the human said "different color", the editor theme still maps the scope to a color
+// 52. the cursor on the .name part of "@alias.name" goes to the name in the imported file, on the @alias part it goes to the import line; spec.human lists both lines without saying which part of the text each is for
+// 53. @AutoComplete lives in src/autocomplete.ts (completeAt) and is wired in src/lsp/server.ts (onCompletion, completionProvider); the pointers were set after coding
+// 54. autocomplete offers names only, no snippets or documentation, and the trigger characters are @ $ ? and .
+// 55. "do not call onlyhuman cli" is read as: no onlyhuman lint or def command is run while building, whether from src/cli.ts, dist/cli.js or npx; the linter and definition core are exercised through npm test only
+// 56. because of 55 this spec.bot was not linted with the onlyhuman cli, which the skill asks for before presenting; check it by hand or tell me to lint it
+// 57. as @<alias> is implemented as of this approve: tokenizer, definition, linter, grammar and autocomplete; a bare `as be` is plain text now; the vscode client bundle and the .vsix were not rebuilt
+// 58. a bare @alias that nothing defines is an undefined-reference like any other name; the alias itself is an @ definition made by the import line
+// 59. autocomplete only looks at the tokens before the cursor on its line, so the cursor in the middle of a typed name offers nothing; after @ it offers aliases then this spec's @ definitions, after @alias. only @ definitions of the imported spec
+// 60. "the prefix after the dot picks the kind, no prefix means @" is read as: "@alias.$Name" is `$Name`, "@alias.?Name" is `?Name`, "@alias.Name" is `@Name`; a # or an @ after the dot is plain text
+// 61. a $ or ? name reached through an alias gets the same checks as an @ name: an unknown name or alias is an undefined-reference, and the reference counts as a use of the alias
+// 62. "@alias.$Name" and "@alias.?Name" are implemented as of this approve in the symbol scan, linter, go-to-definition, autocomplete and grammar; the vscode client bundle and the .vsix were not rebuilt
+// 63. spec.bot was not linted with the onlyhuman cli, see 55; the "@alias.$Name" examples above are quoted so they are not read as references
+// 64. spec.human says version 0.8.0; it was applied to package.json, vscode/package.json and both package-lock.json files on approve, only the package's own version lines
+// 65. the .vsix for 0.8.0 is named onlyhuman-vscode-0.8.0.vsix and is built only when asked, it is not part of approve

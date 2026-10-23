@@ -11,8 +11,8 @@ description: "Write, review and maintain onlyhuman specs, a descriptive language
 - search for specs only under the spec/ folder
 
 # requirement
-- *.human is edited by the human only, the agent never writes to it
-  - to help, list choices of replacement lines for the human review and for you to replace
+- *.human is usually written by the human
+  - to help, list choices of replacement lines for the human to review and allow the agent to edit it step by step
   - grill the human when something is ambiguous or wrong
   - ask before generating, if the human says go ahead anyway list the assumptions at the end of the .bot
 - a line with no leading - must start with a prefix

@@ -1,0 +1,42 @@
+// vscode.bot generated from vscode.human. Do not edit by hand, change vscode.human and regenerate.
+// [path][line] = where the code lives, [path] is relative to the nearest folder that holds .git, or the parent of spec/ when no .git is found
+
+#vscode deployment [./vscode/package.json][1]
+- all implementation is under the vscode folder; the server source stays in src/lsp/server.ts and is bundled in, see spec.bot
+- package as a .vsix, installed with code --install-extension
+  - build: cd vscode, npm run build, then npx vsce package
+  - output: onlyhuman-vscode-<version>.vsix, version is 0.8.0 and is bumped per release
+  - install: code --install-extension onlyhuman-vscode-<version>.vsix
+- bundle the server and client with esbuild into vscode/dist
+  - vscode/dist/server.js // from src/lsp/server.ts, with vscode-languageserver bundled in
+  - vscode/dist/extension.js // from vscode/extension.js, with vscode-languageclient bundled in
+  - no src/, tests/ or node_modules/ ships, .vscodeignore excludes them, and .vscode/ and the build config
+  - main in vscode/package.json points to ./dist/extension.js
+- the server runs on the node that comes with vscode
+  - the client starts dist/server.js with `module`, not `command: node`, so no node install or version is needed on the user machine
+  - the server accepts both ipc and stdio, createConnection picks from the arguments, so the dev setup keeps working
+- publisher is benjit87
+  - package.json has the MIT license, repository https://github.com/Benjit87/onlyhuman, description and categories
+  - vscode/README.md is the listing page
+- published to the marketplace
+  - the publisher benjit87 must already exist on the marketplace
+  - publishing is done by the human with their own personal access token, the robot never asks for or sees the token
+  - the robot prepares everything up to a verified .vsix and stops, then asks before any publish step
+  - a publish is public, so confirm first that FPG policy allows it // see assumptions
+- provide a bash script to install locally
+  - vscode/install-local.sh runs from any working directory and resolves its own location
+  - requires a supported Node.js, npm and the VS Code code command
+  - installs dependencies, builds the bundles, packages the .vsix and installs it with code --install-extension
+  - exits with a nonzero status if any step fails
+- verify before handing over
+  - the .vsix contents are listed with npx vsce ls and contain only dist, package.json, README, LICENSE and the grammars
+  - the bundled server answers an lsp initialize and a definition request over ipc and stdio
+
+// assumptions, open points in vscode.human, change vscode.human if wrong
+// 1. "published to the marketplace" is a release requirement; the robot prepares and verifies the .vsix and asks before publishing, because publishing is a public, human-authorized step
+// 2. "all implementation will be under vscode folder" is read as: the client, grammars, bundle output and scripts live under vscode/, while the shared server source stays in src/lsp/server.ts and is bundled into vscode/dist, so it is not duplicated
+// 3. vscode.human has no reference to a spec.human definition, so "import spec.human" only makes its definitions count as defined here; nothing in this file depends on it
+// 4. the vsix version is 0.8.0 from # version control in spec.human, vscode.human does not state a version
+// 5. the pointers were carried over from spec.bot and not re-checked against code, since no code changed in this regen
+// 6. vscode.human line 1 is "import spec.human as core" with no @, so it is plain text, not an import; nothing from spec.human counts as defined here and the line reports nothing; use "as @core" to import it as an alias, and then an alias nothing references is an unused-definition warning
+// 7. the cli was not run on this file, see spec.bot

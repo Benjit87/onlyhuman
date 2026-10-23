@@ -64,12 +64,16 @@ export function lint(parsed: Parsed, options: LintOptions = {}): Diagnostic[] {
     childSincePrevious = false
   }
 
-  // every definition of an imported spec counts as defined here
+  // every definition of a plain imported spec counts as defined here, those of an aliased import only as alias.name
   const imported = new Set<string>()
+  const aliased = new Map<string, Set<string>>()
   for (const ref of importsOf(parsed)) {
     const spec = options.file?.resolveImport?.(ref.name)
     if (options.file?.resolveImport && !spec) add('unresolved-import', 'error', ref.token, `${ref.name} does not exist`)
-    for (const s of spec ? collectSymbols(spec) : []) if (s.isDefinition) imported.add(s.key)
+    const keys = new Set<string>()
+    for (const s of spec ? collectSymbols(spec) : []) if (s.isDefinition) keys.add(s.key)
+    if (!ref.alias) keys.forEach((k) => imported.add(k))
+    else if (!aliased.has(ref.alias)) aliased.set(ref.alias, keys) // a repeated alias is a duplicate-definition of @alias below
   }
 
   const symbols = collectSymbols(parsed)
@@ -79,12 +83,19 @@ export function lint(parsed: Parsed, options: LintOptions = {}): Diagnostic[] {
     if (s.isDefinition) {
       defs.set(s.key, (defs.get(s.key) ?? 0) + 1)
       if (defs.get(s.key)! > 1) add('duplicate-definition', 'error', s.location, `${s.key} is already defined`)
+    } else if (s.qualifier) {
+      referenced.add('@' + s.qualifier) // @alias.name uses the alias
     } else {
       referenced.add(s.key)
     }
   }
   for (const s of symbols) {
-    if (!s.isDefinition && !defs.has(s.key) && !imported.has(s.key)) add('undefined-reference', 'error', s.location, `${s.key} is not defined`)
+    if (s.qualifier) {
+      const keys = aliased.get(s.qualifier)
+      if (!keys?.has(s.key)) add('undefined-reference', 'error', s.location, `@${s.qualifier}.${s.key[0] === '@' ? '' : s.key[0]}${s.key.slice(1)} is not defined`)
+    } else if (!s.isDefinition && !defs.has(s.key) && !imported.has(s.key)) {
+      add('undefined-reference', 'error', s.location, `${s.key} is not defined`)
+    }
   }
   const reported = new Set<string>()
   for (const s of symbols) {
