@@ -12,7 +12,7 @@ description: "Write, review and maintain onlyhuman specs, a descriptive language
 
 # requirement
 - *.human is usually written by the human
-  - to help, list choices of replacement lines for the human to review and allow the agent to edit it step by step
+  - to assist provide a ask-user-question tool suggesting which line should the agent replace/add for the human
   - grill the human when something is ambiguous or wrong
   - ask before generating, if the human says go ahead anyway list the assumptions at the end of the .bot
 - a line with no leading - must start with a prefix
@@ -67,7 +67,7 @@ description: "Write, review and maintain onlyhuman specs, a descriptive language
 - install with `npm i onlyhuman` in the project
   - run with `npx onlyhuman`
   - use `npm i -g onlyhuman` instead for a global `onlyhuman` command
-- `npx onlyhuman skill init [directory] [--force]` // copy the library's onlyhuman-skill/SKILL.md to <directory>/onlyhuman-skill/SKILL.md
+- `npx onlyhuman skill init [directory] [--force]` // copy the library's onlyhuman/SKILL.md to <directory>/onlyhuman/SKILL.md
 - `npx onlyhuman lint <file>` // *.human or *.bot
 - `npx onlyhuman def <name> <file>`
 - `npx onlyhuman def <file>:<line>:<col>`

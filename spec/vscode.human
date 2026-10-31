@@ -1,3 +1,5 @@
+import spec.human as @spec
+
 #vscode deployment
 - all implementation will be under vscode folder
 - package as a .vsix, installed with code --install-extension
@@ -6,3 +8,7 @@
 - publisher is benjit87
 - published to the marketplace
 - provide a bash script to install locally
+
+@Highlighter
+- provide relevant method signatures with some explaination
+- each @spec.$Token type gets its own color

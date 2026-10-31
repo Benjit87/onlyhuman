@@ -1,8 +1,10 @@
 // vscode.bot generated from vscode.human. Do not edit by hand, change vscode.human and regenerate.
 // [path][line] = where the code lives, [path] is relative to the nearest folder that holds .git, or the parent of spec/ when no .git is found
 
+import spec.human as @spec
+
 #vscode deployment [./vscode/package.json][1]
-- all implementation is under the vscode folder; the server source stays in src/lsp/server.ts and is bundled in, see spec.bot
+- all implementation is under the vscode folder, the grammars are @Highlighter; the server source stays in src/lsp/server.ts and is bundled in, see spec.bot
 - package as a .vsix, installed with code --install-extension
   - build: cd vscode, npm run build, then npx vsce package
   - output: onlyhuman-vscode-<version>.vsix, version is 0.8.0 and is bumped per release
@@ -23,7 +25,7 @@
   - publishing is done by the human with their own personal access token, the robot never asks for or sees the token
   - the robot prepares everything up to a verified .vsix and stops, then asks before any publish step
   - a publish is public, so confirm first that FPG policy allows it // see assumptions
-- provide a bash script to install locally
+- provide a bash script to install locally // vscode.human spells it "locall", read as "locally"
   - vscode/install-local.sh runs from any working directory and resolves its own location
   - requires a supported Node.js, npm and the VS Code code command
   - installs dependencies, builds the bundles, packages the .vsix and installs it with code --install-extension
@@ -32,11 +34,53 @@
   - the .vsix contents are listed with npx vsce ls and contain only dist, package.json, README, LICENSE and the grammars
   - the bundled server answers an lsp initialize and a definition request over ipc and stdio
 
+@Highlighter [./vscode/syntaxes/human.tmLanguage.json][1]
+- a textmate grammar registered under contributes.grammars in vscode/package.json
+- *.bot gets the same grammar through its own language id
+- lexical only, no server needed, so it does not depend on the language server or the CLI
+- method signatures // the highlighter is declarative; these are its grammar rules, one per token class
+  - %comment [./vscode/syntaxes/human.tmLanguage.json][55] // comment.line.double-slash.human, // to end of line
+  - %requirement [./vscode/syntaxes/human.tmLanguage.json][59] // markup.heading.human, # to end of line or comment
+  - %entity [./vscode/syntaxes/human.tmLanguage.json][64] // entity.name.type.human, $name
+  - %state [./vscode/syntaxes/human.tmLanguage.json][68] // variable.other.constant.human, ?name
+  - %service [./vscode/syntaxes/human.tmLanguage.json][72] // entity.name.function.human, @name
+  - %bare-prefix [./vscode/syntaxes/human.tmLanguage.json][76] // punctuation.definition.prefix.human, a prefix alone
+  - %arrow [./vscode/syntaxes/human.tmLanguage.json][80] // keyword.operator.arrow.human
+  - %plus [./vscode/syntaxes/human.tmLanguage.json][84] // keyword.operator.plus.human
+  - %equals [./vscode/syntaxes/human.tmLanguage.json][88] // keyword.operator.equals.human
+  - %bullet [./vscode/syntaxes/human.tmLanguage.json][92] // punctuation.definition.list.begin.human
+  - %dash [./vscode/syntaxes/human.tmLanguage.json][96] // punctuation.definition.dash.human
+  - %word [./vscode/syntaxes/human.tmLanguage.json][100] // string.unquoted.word.human
+  - %percent [./vscode/syntaxes/robot.tmLanguage.json][10] // keyword.operator.percent.human, only in *.bot
+  - %alias-kind // "@alias.$Name" scopes the dot part as entity.name.type and "@alias.?Name" as variable.other.constant, the @alias part keeps the alias scope
+  - %alias [./vscode/syntaxes/human.tmLanguage.json][48] // variable.other.alias.human, the @alias after as and the @alias part of "@alias.name", a color of its own
+  - %import [./vscode/syntaxes/human.tmLanguage.json][24] // keyword.control.import.human, the word import as the first word of a line, in both grammars
+- each @spec.$Token type gets its own highlighting scope; the editor theme picks the actual colour
+  - the $ name // entity.name.type
+  - the ? name // variable.other.constant
+  - the @ name // entity.name.function
+  - a # line // markup.heading, whole line
+  - the comment marker and comment_sentence // comment.line, from the marker to end of line, nothing inside is coloured
+  - arrow, plus and equals // distinct keyword.operator scopes
+  - bullet and later dash // distinct punctuation scopes
+  - percent // keyword.operator scope of its own, *.bot only
+  - import // keyword.control scope, only as the first word of a line, any other import is a word
+  - @<alias> // own variable.other.alias scope, so the alias differs in color from other @ names
+  - word // distinct word scope, theme decides its colour
+  - comment_sentence // comment scope, shared with the comment marker because the entire comment is highlighted together
+- a bare prefix with no name gets the punctuation scope of its prefix
+- prefix colour covers prefix + name together, so references and definitions look the same
+- semantic highlighting (undefined names in a different colour) is not part of this, it would be a later step in the language server
+
 // assumptions, open points in vscode.human, change vscode.human if wrong
 // 1. "published to the marketplace" is a release requirement; the robot prepares and verifies the .vsix and asks before publishing, because publishing is a public, human-authorized step
 // 2. "all implementation will be under vscode folder" is read as: the client, grammars, bundle output and scripts live under vscode/, while the shared server source stays in src/lsp/server.ts and is bundled into vscode/dist, so it is not duplicated
-// 3. vscode.human has no reference to a spec.human definition, so "import spec.human" only makes its definitions count as defined here; nothing in this file depends on it
 // 4. the vsix version is 0.8.0 from # version control in spec.human, vscode.human does not state a version
-// 5. the pointers were carried over from spec.bot and not re-checked against code, since no code changed in this regen
-// 6. vscode.human line 1 is "import spec.human as core" with no @, so it is plain text, not an import; nothing from spec.human counts as defined here and the line reports nothing; use "as @core" to import it as an alias, and then an alias nothing references is an unused-definition warning
-// 7. the cli was not run on this file, see spec.bot
+// 5. the pointers were carried over and not re-checked against code, since no code changed in this regen
+// 7. the cli was run on this file after the regen
+// 8. vscode.human now imports spec.human as @spec, so "@spec.$Token" under @Highlighter is a qualified reference to $Token in spec.human; the import is used, so the alias is not an unused-definition
+// 9. @Highlighter was moved here from spec.human; its grammar rules and scopes are carried over unchanged, only "each @spec.$Token type gets its own color" now names the token type through the alias
+// 10. vscode.human has no per-token colour list any more, so the % lines below @Highlighter keep the rules of the previous generation; "its own color" means a distinct TextMate scope, the editor theme picks the colour
+// 11. neither human file now says @Highlighter works on *.bot; the *.bot grammar and its language id are kept from the previous generation as an implementation detail; say so if it should go
+// 12. the "locall" typo in vscode.human is fixed, no assumption needed
+// 13. no code changed in this regen, so the [path][line] pointers were kept

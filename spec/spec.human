@@ -3,7 +3,6 @@
 - do not call onlyhuman cli as this project is about creating it, only read in onlyhuman-skill/SKILL.md
 - implementation is in typescript
 - [path][line] numbers are targets and get updated after coding.
-- @Linter, @GoToDefinition and @Highlighter work on *.bot as well as *.human
 - describe every method under each service name in details via %
 
 # version control
@@ -80,22 +79,6 @@ $Tokens
 - "@alias.api_service" goes to "@api_service" in the target file
 - @<alias> reference goes to the import line
 
-@Highlighter
-- provide relevant method signatures with some explaination
-- each token type gets its own color
-- $
-- @
-- ?
-- #
-- "//"
-- ->
-- +
-- ==
-- -
-- %
-- "import"
-- @<alias> // own color, after as and in "@alias.name"
-
 @AutoComplete
 - triggers on @ and on "@alias."
 - offer the @<alias> of this spec's imports, then the @ $ ? names of the imported spec
@@ -116,14 +99,14 @@ $Tokens
 - @Linter
 - @AutoComplete
 
-@Skill
-- source is the onlyhuman-skill/SKILL.md that ships inside the onlyhuman library, fixed in the library, not looked up from the user path
+@Init
+- source is the onlyhuman/SKILL.md that ships inside the onlyhuman library, fixed in the library, not looked up from the user path
 - copy as is, no generating or editing
 - nothing from the user repo is used
-- target is onlyhuman-skill/SKILL.md under the user path
+- target is onlyhuman/SKILL.md under the user path
 
 @CLI
 - cli def supports both name form and position form
 - @GoToDefinition
 - @Linter
-- @Skill
+- @Init
