@@ -73,7 +73,7 @@ Rules:
 - A `//` is a comment only when it starts a space-separated word. `"//"`, `a//b` and `\//` are plain words.
 - In a `.bot`, a header may end with a pointer to code: `$Token [./src/types.ts][14]`. The path is relative to the nearest folder that holds `.git`; when there is no `.git`, it is relative to the parent of the `spec/` folder.
 
-The full rules, including how the robot behaves, are in [onlyhuman-skill/SKILL.md](onlyhuman-skill/SKILL.md). The spec for this tool is in [spec/spec.human](spec/spec.human).
+The full rules, including how the robot behaves, are in [onlyhuman/SKILL.md](onlyhuman/SKILL.md). The spec for this tool is in [spec/spec.human](spec/spec.human).
 
 ## Workflow
 
@@ -104,7 +104,7 @@ Initialize a project skill:
 onlyhuman skill init
 ```
 
-This copies the library's `onlyhuman-skill/SKILL.md` into `<directory>/onlyhuman-skill/SKILL.md`; add `--force` to overwrite an existing file.
+This copies the library's `onlyhuman/SKILL.md` into `<directory>/onlyhuman/SKILL.md`; add `--force` to overwrite an existing file.
 
 Lint a file. This prints `file:line:col severity rule message` and exits 1 on errors:
 
@@ -145,8 +145,8 @@ code --extensionDevelopmentPath=/path/to/onlyhuman/vscode /path/to/onlyhuman/spe
 | `src/definition.ts` | go-to-definition and `[path][line]` pointers |
 | `src/files.ts` | the only file-system access: sibling file and project root |
 | `src/cli.ts`, `src/lsp/server.ts` | command line and language server |
-| `src/skill.ts` | copies `onlyhuman-skill/SKILL.md` into the target project |
-| `onlyhuman-skill/` | the skill shipped with the package |
+| `src/skill.ts` | copies `onlyhuman/SKILL.md` into the target project |
+| `onlyhuman/` | the skill shipped with the package |
 | `npm.sh` | build, verify and publish the CLI package |
 | `LICENSE` | MIT license |
 | `vscode/` | editor client and highlighting grammars |

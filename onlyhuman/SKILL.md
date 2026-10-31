@@ -67,7 +67,7 @@ description: "Write, review and maintain onlyhuman specs, a descriptive language
 - install with `npm i onlyhuman` in the project
   - run with `npx onlyhuman`
   - use `npm i -g onlyhuman` instead for a global `onlyhuman` command
-- `npx onlyhuman skill init [directory] [--force]` // copy the library's onlyhuman-skill/SKILL.md to <directory>/onlyhuman-skill/SKILL.md
+- `npx onlyhuman skill init [directory] [--force]` // copy the library's onlyhuman/SKILL.md to <directory>/onlyhuman/SKILL.md
 - `npx onlyhuman lint <file>` // *.human or *.bot
 - `npx onlyhuman def <name> <file>`
 - `npx onlyhuman def <file>:<line>:<col>`

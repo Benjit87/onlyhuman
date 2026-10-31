@@ -5,8 +5,8 @@
 - implement a parser for onlyhuman skill syntax; this covers the *.human and *.bot spec language described here
 - language is TypeScript, development requires Node >= 22.18, strict mode
 - parser, linter and definition core are pure functions, no editor or fs dependency; @LSP and @CLI share them
-- @Linter, @GoToDefinition and @Highlighter work on *.bot as well as *.human
-- do not call the onlyhuman cli while building this project, it is what is being created; read onlyhuman-skill/SKILL.md for the rules, and check the work with npm test
+- @Linter and @GoToDefinition work on *.bot as well as *.human
+- do not call the onlyhuman cli while building this project, it is what is being created; read onlyhuman/SKILL.md for the rules, and check the work with npm test
 - layout
   - src/types.ts // $Token $Node $Tokens types
   - src/tokenizer.ts // $Data -> $Tokens
@@ -18,13 +18,13 @@
   - src/autocomplete.ts // @AutoComplete, a pure function used by @LSP
   - src/cli.ts // @CLI
   - src/skill.ts // @Skill copy operation
-  - onlyhuman-skill/SKILL.md // Codex skill instructions and tooling
+  - onlyhuman/SKILL.md // Codex skill instructions and tooling
   - dist/cli.js // bundled CLI published to npm
   - npm.sh // build, verify and publish the CLI
   - vscode/ // thin client, starts the lsp for *.human and *.bot
   - vscode/dist/ // bundled output of esbuild, what the .vsix ships
   - vscode/install-local.sh // bash script to build, package and install the extension locally
-  - vscode/syntaxes/human.tmLanguage.json // @Highlighter grammar for *.human
+  - vscode/syntaxes/human.tmLanguage.json // grammar for *.human, see vscode.bot
   - vscode/syntaxes/robot.tmLanguage.json // same grammar for *.bot, language id onlyhuman-robot
   - tests/ // unit tests on the pure functions
   - README.md // project documentation and npm package page
@@ -300,44 +300,6 @@ $Node [./src/types.ts][29]
   - no pointer, or the file is missing: stays on the .bot header
 - the caller passes the parsed robot, the function does no file reading
 
-@Highlighter [./vscode/syntaxes/human.tmLanguage.json][1]
-- a textmate grammar registered under contributes.grammars in vscode/package.json
-- *.bot gets the same grammar through its own language id
-- lexical only, no server needed, so it does not depend on @LSP or @CLI
-- method signatures // the highlighter is declarative; these are its grammar rules, one per token class
-  - %comment [./vscode/syntaxes/human.tmLanguage.json][55] // comment.line.double-slash.human, // to end of line
-  - %requirement [./vscode/syntaxes/human.tmLanguage.json][59] // markup.heading.human, # to end of line or comment
-  - %entity [./vscode/syntaxes/human.tmLanguage.json][64] // entity.name.type.human, $name
-  - %state [./vscode/syntaxes/human.tmLanguage.json][68] // variable.other.constant.human, ?name
-  - %service [./vscode/syntaxes/human.tmLanguage.json][72] // entity.name.function.human, @name
-  - %bare-prefix [./vscode/syntaxes/human.tmLanguage.json][76] // punctuation.definition.prefix.human, a prefix alone
-  - %arrow [./vscode/syntaxes/human.tmLanguage.json][80] // keyword.operator.arrow.human
-  - %plus [./vscode/syntaxes/human.tmLanguage.json][84] // keyword.operator.plus.human
-  - %equals [./vscode/syntaxes/human.tmLanguage.json][88] // keyword.operator.equals.human
-  - %bullet [./vscode/syntaxes/human.tmLanguage.json][92] // punctuation.definition.list.begin.human
-  - %dash [./vscode/syntaxes/human.tmLanguage.json][96] // punctuation.definition.dash.human
-  - %word [./vscode/syntaxes/human.tmLanguage.json][100] // string.unquoted.word.human
-  - %percent [./vscode/syntaxes/robot.tmLanguage.json][10] // keyword.operator.percent.human, only in *.bot
-  - %alias-kind // "@alias.$Name" scopes the dot part as entity.name.type and "@alias.?Name" as variable.other.constant, the @alias part keeps the alias scope
-  - %alias [./vscode/syntaxes/human.tmLanguage.json][48] // variable.other.alias.human, the @alias after as and the @alias part of "@alias.name", a color of its own
-  - %import [./vscode/syntaxes/human.tmLanguage.json][24] // keyword.control.import.human, the word import as the first word of a line, in both grammars
-- each token type gets its own highlighting scope; the editor theme picks the actual colour
-  - the $ name // entity.name.type
-  - the ? name // variable.other.constant
-  - the @ name // entity.name.function
-  - a # line // markup.heading, whole line
-  - the comment marker and comment_sentence // comment.line, from the marker to end of line, nothing inside is coloured
-  - arrow, plus and equals // distinct keyword.operator scopes
-  - bullet and later dash // distinct punctuation scopes
-  - percent // keyword.operator scope of its own, *.bot only
-  - import // keyword.control scope, only as the first word of a line, any other import is a word
-  - @<alias> // own variable.other.alias scope, so the alias differs in color from other @ names
-  - word // distinct word scope, theme decides its colour
-  - comment_sentence // comment scope, shared with the comment marker because the entire comment is highlighted together
-- a bare prefix with no name gets the punctuation scope of its prefix
-- prefix colour covers prefix + name together, so references and definitions look the same
-- semantic highlighting (undefined names in a different colour) is not part of this, it would be a later step in @LSP
-
 @AutoComplete [./src/autocomplete.ts][39]
 - the @<alias> in import statement must have autocomplete function
 - triggers on @ and on "@alias."
@@ -374,26 +336,26 @@ $Node [./src/types.ts][29]
 - vscode client in ./vscode starts the server for files *.human, and *.bot
 
 @Skill [./src/skill.ts][1]
-- source is the onlyhuman-skill/SKILL.md that ships inside the onlyhuman library, fixed in the library, not looked up from the user path
-  - %initSkill(directory: string = ".", options?: InitSkillOptions): string [./src/skill.ts][13] // copy the library skill file into <directory>/onlyhuman-skill/SKILL.md, return the target path
+- source is the onlyhuman/SKILL.md that ships inside the onlyhuman library, fixed in the library, not looked up from the user path
+  - %initSkill(directory: string = ".", options?: InitSkillOptions): string [./src/skill.ts][13] // copy the library skill file into <directory>/onlyhuman/SKILL.md, return the target path
     - throws when the library file is missing, or when the target exists and options.force is not set
-    - creates the onlyhuman-skill directory when missing, then copies byte-for-byte
+    - creates the onlyhuman directory when missing, then copies byte-for-byte
   - %InitSkillOptions [./src/skill.ts][6] // force?: boolean, allow replacing an existing target
   - the source path is resolved from the library's own location, e.g. import.meta.url, never from <directory> or the current directory
-  - onlyhuman-skill/SKILL.md is listed in package.json files so it is present after npm i
+  - onlyhuman/SKILL.md is listed in package.json files so it is present after npm i
   - fail with a clear error when the library skill file cannot be found
 - copy as is, no generating or editing
   - byte-for-byte with copyFileSync
 - nothing from the user repo is used
   - a SKILL.md in the user repo is neither read nor replaced by the source
-- target is onlyhuman-skill/SKILL.md under the user path
-  - create the onlyhuman-skill directory when missing
+- target is onlyhuman/SKILL.md under the user path
+  - create the onlyhuman directory when missing
   - refuse to overwrite an existing target without --force
   - print the written path
 - validation
-  - the source onlyhuman-skill/SKILL.md must pass skill-creator quick_validate.py
+  - the source onlyhuman/SKILL.md must pass skill-creator quick_validate.py
   - onlyhuman lint validates .human and .bot specs, not Markdown
-- tests assert the copied file matches onlyhuman-skill/SKILL.md and ignores a different SKILL.md in the user project
+- tests assert the copied file matches onlyhuman/SKILL.md and ignores a different SKILL.md in the user project
 
 @CLI [./src/cli.ts][29]
 - @GoToDefinition
@@ -407,8 +369,8 @@ $Node [./src/types.ts][29]
   - %skillInit [./src/cli.ts][32] // parse the command and call initSkill
     - at most one directory argument, more than one prints the usage and returns 2
     - an initSkill error is printed to stderr and returns 1, success prints "created <path>" and returns 0
-  - copy the library skill file as is to onlyhuman-skill/SKILL.md under the given directory
-  - create onlyhuman-skill when missing
+  - copy the library skill file as is to onlyhuman/SKILL.md under the given directory
+  - create onlyhuman when missing
   - fail if the library skill file is missing
   - do not overwrite an existing file without --force
   - print the written path
@@ -427,9 +389,9 @@ $Node [./src/types.ts][29]
 - @LSP passes file info too when the file is on disk
 
 // assumptions, open points in spec.human, change spec.human if wrong
-// 1. @GoToDefinition, @Highlighter and @Linter list their public method or grammar-rule signatures with brief explanations; private helpers are omitted
-// 2. @Highlighter has no executable methods, so its method signatures are the TextMate grammar rules and scopes; if you expect functions there, say so
-// 3. @Highlighter "each token type gets its own color" means a distinct TextMate scope per token type; the editor theme maps scopes to actual colors
+// 1. @GoToDefinition and @Linter list their public method or grammar-rule signatures with brief explanations; private helpers are omitted
+// 2. superseded, @Highlighter is no longer defined in spec.human, see 66
+// 3. superseded, see 66; the TextMate scope notes now live in vscode.bot
 // 4. the vscode deployment section moved to vscode.human; its generated spec and assumptions are in vscode.bot
 // 5. development uses Node >= 22.18; the bundled server targets the Node runtime shipped with VS Code, and the CLI bundle targets node20
 // 6. in a *.bot, go-to-definition on a header or % line goes to its code pointer, not back to the .human header; the .human definition remains the source of intent
@@ -438,15 +400,15 @@ $Node [./src/types.ts][29]
 // 9. package name availability is not checked until publish; the current name is onlyhuman and the scoped fallback is "@benjit87/onlyhuman"
 // 10. the npm package exports only the CLI; the parser API remains internal until the human asks for it
 // 11. # version control applies 0.8.0 to package.json, vscode/package.json and both lockfiles
-// 12. @Skill is exposed as onlyhuman skill init and writes onlyhuman-skill/SKILL.md under the given directory
-// 13. skill init refuses to overwrite an existing onlyhuman-skill/SKILL.md unless --force is passed
+// 12. @Skill is exposed as onlyhuman skill init and writes onlyhuman/SKILL.md under the given directory
+// 13. skill init refuses to overwrite an existing onlyhuman/SKILL.md unless --force is passed
 // 14. @Skill in spec.human has no flow line now; --force, create-directory and print-path behaviour are kept from the previous spec as details
 // 15. "fixed in the library" is read as a file shipped in the npm package and located relative to the running code, not a copy embedded in source
-// 16. the target is literally onlyhuman-skill/SKILL.md; existing .onlyhuman/SKILL.md files are left in place and are not migrated
+// 16. the target is literally onlyhuman/SKILL.md; existing .onlyhuman/SKILL.md files are left in place and are not migrated
 // 17. consecutive-header applies only to prefix headers (@ ? $ #); comment headers are not counted, and a final header with no child is not flagged unless a separate empty-header rule is added
 // 18. the example '(?Parser)' is read as a state name; ?Parser is undefined in this spec, so the example covers recognition inside parentheses, not a successful lookup
 // 19. only parentheses are treated as ignored punctuation; other punctuation such as commas remains a separate word
-// 20. "import" is now tool-supported: @Linter, @GoToDefinition and @Highlighter handle it; before this regen it was a robot-only convention
+// 20. "import" is now tool-supported: @Linter, @GoToDefinition and the grammar in vscode.bot handle it; before this regen it was a robot-only convention
 // 21. "*.human" in the import line is read as a placeholder for a spec file name such as backend.human, resolved under spec/, not a glob; "import all" means every $ @ ? # header of that file
 // 22. "starts in a new line" is read as: import is the first word of its own line, one file per line; it may be bare (no prefix, exempt from no-prefix) or a child line after a bullet
 // 23. "relevant definitions" is read as all definitions of the imported spec; unused-definition is not applied to imported names
@@ -463,7 +425,7 @@ $Node [./src/types.ts][29]
 // 34. "a % in a *.human has no robot target" from the previous bot is removed, it is superseded by the new % child line rule
 // 35. version 0.7.0 was applied on an earlier approve, 0.8.0 was applied on this one to package.json, vscode/package.json and both lockfiles, only the package's own version lines, not dependency versions
 // 36. "describe every method under each service name in details via %" is read as: every exported method of a service gets a % child line with a short detail list; private helpers are listed only for @GoToDefinition because the new % rule lives in them
-// 37. @Highlighter has no methods, so its % lines are its grammar rules, which already carry their scope and what they match
+// 37. superseded, see 66
 // 38. the fs helpers in src/files.ts are shared by @LSP and @CLI but belong to no service in spec.human, so they are not listed as service methods
 // 39. spec.human no longer has the "import core.human" line; the earlier unresolved import is gone, so spec.bot carries no import
 // 40. the #vscode deployment section is no longer in spec.human, so it was removed from this file; it now lives in vscode.human and vscode.bot
@@ -492,3 +454,12 @@ $Node [./src/types.ts][29]
 // 63. spec.bot was not linted with the onlyhuman cli, see 55; the "@alias.$Name" examples above are quoted so they are not read as references
 // 64. spec.human says version 0.8.0; it was applied to package.json, vscode/package.json and both package-lock.json files on approve, only the package's own version lines
 // 65. the .vsix for 0.8.0 is named onlyhuman-vscode-0.8.0.vsix and is built only when asked, it is not part of approve
+// 66. @Highlighter moved from spec.human to vscode.human and the line naming it was removed from #implementation, so spec.human no longer has an undefined reference; "work on *.bot as well as *.human" now covers @Linter and @GoToDefinition only
+// 67. the per-token colour list that was under @Highlighter in spec.human was dropped by the human; the grammar itself is unchanged and keeps its scopes, see vscode.bot
+// 68. unused-definition warnings for ?Data, @Parser, @LSP and @CLI are left as they are, spec.human is not changed by the robot
+// 69. onlyhuman-skill/SKILL.md was moved to onlyhuman/SKILL.md by the human and the two @Skill lines in spec.human say so; applied on approve to src/skill.ts, src/cli.ts help, package.json files, tests and README
+// 70. no code changed in this regen, so the [path][line] pointers were kept; the pointers of the removed @Highlighter section moved to vscode.bot
+// 71. spec.human line 3 still says "only read in onlyhuman-skill/SKILL.md"; that path no longer exists, so it is read as onlyhuman/SKILL.md; fix line 3 if the old path was meant
+// 72. the source inside the package and the target in the user project both use the folder onlyhuman/, as the two @Skill lines say; the folder name matches the package name, so an existing onlyhuman/ folder in a user project is treated as the skill folder, and an existing SKILL.md there is not overwritten without --force
+// 73. the path rename is not migrated for users; an existing onlyhuman-skill/SKILL.md in a user project is left in place
+// 74. applied on approve: the source file is onlyhuman/SKILL.md in the repo; the old onlyhuman-skill/ entry shows as deleted in git and onlyhuman/ is untracked, nothing was staged or committed; dist/cli.js was rebuilt, the vscode bundle and .vsix were not; the [path][line] pointers were rechecked and the edits did not change any line numbers

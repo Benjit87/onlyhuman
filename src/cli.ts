@@ -20,7 +20,7 @@ const USAGE = `usage:
   onlyhuman lint <file>             *.human or *.bot
   onlyhuman def <name> <file>        e.g. onlyhuman def '$Token' spec.human
   onlyhuman def <file>:<line>:<col>  1-based line and col
-  onlyhuman skill init [directory] [--force]  write onlyhuman-skill/SKILL.md`
+  onlyhuman skill init [directory] [--force]  write onlyhuman/SKILL.md`
 
 function load(file: string) {
   return parseText(readFileSync(file, 'utf8'))
