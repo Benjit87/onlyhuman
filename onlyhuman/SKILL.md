@@ -12,7 +12,7 @@ description: "Write, review and maintain onlyhuman specs, a descriptive language
 
 # requirement
 - *.human is usually written by the human
-  - to help, list choices of replacement lines for the human to review and allow the agent to edit it step by step
+  - to assist provide a ask-user-question tool suggesting which line should the agent replace/add for the human
   - grill the human when something is ambiguous or wrong
   - ask before generating, if the human says go ahead anyway list the assumptions at the end of the .bot
 - a line with no leading - must start with a prefix
