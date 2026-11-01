@@ -44,4 +44,10 @@ Add the skill to your project so the robot knows the rules:
 npx onlyhuman skill init
 ```
 
+or, with the skills CLI:
+
+```bash
+npx skills add benjit87/onlyhuman
+```
+
 For editor highlighting, linting and go-to-definition, install the VS Code extension from a clone of this repo with `cd vscode && ./install-local.sh`. See [doc/DETAILS.md](doc/DETAILS.md) for the full syntax, CLI and editor details.
