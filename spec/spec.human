@@ -1,6 +1,6 @@
 #implementation
 - a parser for onlyhuman skill syntax
-- do not call onlyhuman cli as this project is about creating it, only read in onlyhuman-skill/SKILL.md
+- do not call onlyhuman cli as this project is about creating it, only read in onlyhuman/SKILL.md
 - implementation is in typescript
 - [path][line] numbers are targets and get updated after coding.
 - describe every method under each service name in details via %

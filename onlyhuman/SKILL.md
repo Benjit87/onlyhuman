@@ -71,3 +71,6 @@ description: "Write, review and maintain onlyhuman specs, a descriptive language
 - `npx onlyhuman lint <file>` // *.human or *.bot
 - `npx onlyhuman def <name> <file>`
 - `npx onlyhuman def <file>:<line>:<col>`
+
+# vscode language extension
+- code --install-extension benjit87.onlyhuman-vscode
