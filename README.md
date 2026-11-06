@@ -50,4 +50,10 @@ or, with the skills CLI:
 npx skills add benjit87/onlyhuman
 ```
 
+or, as a Claude Code plugin (Claude Code 2.1.275 or later):
+
+```
+/plugin install onlyhuman-skills --marketplace Benjit87/onlyhuman
+```
+
 For editor highlighting, linting and go-to-definition, install the VS Code extension from a clone of this repo with `cd vscode && ./install-local.sh`. See [doc/DETAILS.md](doc/DETAILS.md) for the full syntax, CLI and editor details.

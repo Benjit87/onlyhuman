@@ -21,7 +21,7 @@ const USAGE = `usage:
   onlyhuman lint <file>             *.human or *.bot
   onlyhuman def <name> <file>        e.g. onlyhuman def '$Token' spec.human
   onlyhuman def <file>:<line>:<col>  1-based line and col
-  onlyhuman skill init [directory] [--force]  write onlyhuman/SKILL.md
+  onlyhuman skill init [directory] [--force]  write skills/onlyhuman/SKILL.md
   onlyhuman lsp                      run the language server over stdio
   onlyhuman --version | -v           show the version number`
 

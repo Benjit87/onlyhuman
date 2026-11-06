@@ -1,0 +1,8 @@
+{
+  "name": "onlyhuman",
+  "displayName": "OnlyHuman",
+  "version": "0.9.0",
+  "description": "Skill for writing and reviewing onlyhuman specs: you write concise *.human intent, the agent generates the detailed *.bot for review, then implements it on approval.",
+  "author": { "name": "benjit87", "url": "https://github.com/Benjit87/onlyhuman" },
+  "license": "MIT"
+}
