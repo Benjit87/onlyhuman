@@ -1,0 +1,11 @@
+id = "onlyhuman"
+name = "onlyhuman"
+description = "Language server support for onlyhuman *.human and *.bot specs"
+version = "0.9.0"
+schema_version = 1
+authors = ["benji thian"]
+repository = "https://github.com/Benjit87/onlyhuman"
+
+[language_servers.onlyhuman]
+name = "onlyhuman"
+languages = ["onlyhuman", "onlyhuman-robot"]

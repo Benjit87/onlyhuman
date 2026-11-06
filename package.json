@@ -1,6 +1,6 @@
 {
   "name": "onlyhuman",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "A descriptive language for writing specs in plain bullets, with a CLI linter and go-to-definition.",
   "license": "MIT",
   "type": "module",
@@ -35,7 +35,7 @@
     "lint:spec": "node src/cli.ts lint spec/spec.human",
     "typecheck": "tsc --noEmit",
     "lsp": "node src/lsp/server.ts --stdio",
-    "build:cli": "esbuild src/cli.ts --bundle --platform=node --format=esm --target=node20 --outfile=dist/cli.js",
+    "build:cli": "esbuild src/cli.ts --bundle --platform=node --format=esm --target=node20 --banner:js=\"import { createRequire as __cr } from 'node:module'; const require = __cr(import.meta.url);\" --outfile=dist/cli.js",
     "prepublishOnly": "npm test && npm run typecheck && npm run build:cli"
   },
   "engines": {

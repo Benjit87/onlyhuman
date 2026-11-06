@@ -185,6 +185,12 @@ export function definitionAt(
   return undefined
 }
 
+// %method(arg=A) is the method `method`, the postfix brackets are parameter detail only
+export function methodName(word: string): string {
+  const i = word.indexOf('(')
+  return i > 0 ? word.slice(0, i) : word
+}
+
 // a % child line, with the cursor on the % or its name
 function methodAt(parsed: Parsed, line: number, col: number) {
   const node = parsed.nodes.find((n) => n.kind === 'child' && n.line === line && n.token?.kind === 'percent')
@@ -192,7 +198,7 @@ function methodAt(parsed: Parsed, line: number, col: number) {
   if (!node || !percent) return undefined
   const word = node.tokens.find((t) => t.kind === 'word' && t.line === line && t.col === percent.col + 1)
   if (!word || col < percent.col || col > word.col + word.length) return undefined
-  return { node, name: word.text, location: { line, col: percent.col, length: 1 + word.length } }
+  return { node, name: methodName(word.text), location: { line, col: percent.col, length: 1 + word.length } }
 }
 
 // the key of a header node, prefix + name or # + requirement text, same as findDefinition uses
@@ -215,7 +221,7 @@ function robotMethod(parsed: Parsed, node: Node, robot: Parsed, name: string): L
   for (let n = stack.shift(); n; n = stack.shift()) {
     const percent = n.token
     const word = percent?.kind === 'percent' ? n.tokens.find((t) => t.kind === 'word' && t.col === percent.col + 1) : undefined
-    if (percent && word?.text === name) return { line: n.line, col: percent.col, length: 1 + word.length }
+    if (percent && word && methodName(word.text) === name) return { line: n.line, col: percent.col, length: 1 + word.length }
     stack.unshift(...n.children)
   }
   return undefined

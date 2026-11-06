@@ -46,6 +46,7 @@ export function lint(parsed: Parsed, options: LintOptions = {}): Diagnostic[] {
     }
 
     checkOperators(node, add)
+    checkPrefixes(node, add)
   }
 
   let previousPrefixHeader: Token | undefined
@@ -126,6 +127,24 @@ export function lint(parsed: Parsed, options: LintOptions = {}): Diagnostic[] {
   }
 
   return out.sort((a, b) => a.line - b.line || a.col - b.col)
+}
+
+// more than one prefix variable on a line is an error, a line with -> + or == is exempt
+function checkPrefixes(node: Node, add: (rule: string, severity: Severity, t: Token, message: string) => void) {
+  const ci = node.tokens.findIndex((t) => t.kind === 'comment')
+  const toks = ci === -1 ? node.tokens : node.tokens.slice(0, ci)
+  if (toks.some((t) => OPERATORS.includes(t.kind))) return
+  const named: Token[] = []
+  toks.forEach((t, i) => {
+    if (t.kind !== 'prefix' && t.kind !== 'percent') return
+    const next = toks[i + 1]
+    if (!(next?.kind === 'word' && next.line === t.line && next.col === t.col + 1)) return // a bare prefix names nothing
+    const prev = toks[i - 1]
+    // "@alias.$Name": the $ after the dot of a qualified reference belongs to the same variable
+    if (prev?.kind === 'word' && prev.text.startsWith('.') && prev.col + prev.length === t.col) return
+    named.push(t)
+  })
+  if (named.length > 1) add('multiple-prefix', 'error', named[1], `more than one prefix variable on a line (${named.map((t) => t.text).join(' ')}), use a child line for each`)
 }
 
 function checkOperators(

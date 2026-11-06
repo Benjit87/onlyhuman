@@ -1,0 +1,40 @@
+// zed.bot generated from zed.human. Do not edit by hand, change zed.human and regenerate.
+// [path][line] = where the code lives, [path] is relative to the nearest folder that holds .git, or the parent of spec/ when no .git is found
+
+#instructions [./zed/extension.toml][1]
+- all work is done in the zed folder at the repository root, nothing outside it changes
+- create the .toml files a Zed extension needs
+  - %extension.toml [./zed/extension.toml][1] // the manifest, id onlyhuman, name onlyhuman, version 0.9.0 to match the package, schema_version 1, and authors, description, repository
+    - registers one language server, onlyhuman, for the languages onlyhuman and onlyhuman-robot
+  - %languages/onlyhuman/config.toml [./zed/languages/onlyhuman/config.toml][1] // language onlyhuman for *.human, path_suffixes human, line_comments "// "
+  - %languages/onlyhuman-robot/config.toml [./zed/languages/onlyhuman-robot/config.toml][1] // language onlyhuman-robot for *.bot, path_suffixes bot, same comment marker
+  - %Cargo.toml [./zed/Cargo.toml][1] // crate type cdylib, depends on zed_extension_api, needed because Zed loads an extension as WASM when it starts a language server
+- how the server starts
+  - %language_server_command [./zed/src/lib.rs][11] // returns the command Zed runs, `onlyhuman lsp` over stdio
+    - the command comes from the onlyhuman CLI on the user's PATH or from npx, so the extension does not copy the server
+    - the server is the same one the vscode client starts, from src/lsp/server.ts
+  - Zed has no setting that starts an arbitrary server, so a language_servers entry in extension.toml plus this function is the minimum, see assumption 1
+- not in scope
+  - no tree-sitter grammar, so no syntax colours in Zed, only diagnostics, completion and go-to-definition from the server
+  - no change to the vscode folder, src/ or the CLI, only the zed folder
+- install for testing: in Zed run `zed: install dev extension` and pick the zed folder
+- layout
+  - zed/extension.toml
+  - zed/Cargo.toml
+  - zed/src/lib.rs
+  - zed/languages/onlyhuman/config.toml
+  - zed/languages/onlyhuman-robot/config.toml
+
+// assumptions, open points in zed.human, change zed.human if wrong
+// 1. "create the necessary .toml extension file for zed" is read as the files above; a language server cannot be started from .toml alone, Zed needs the Rust crate (Cargo.toml and src/lib.rs) that implements language_server_command, so those two files are included
+// 2. the command `onlyhuman lsp` is the one proposed in spec.human under the CLI, it is not implemented yet; until it is, the extension would have to start `node` on src/lsp/server.ts with --stdio, which only works inside this repository
+// 3. the id onlyhuman, the language names onlyhuman and onlyhuman-robot, and the version 0.9.0 are my choices, zed.human gives none; the names follow the vscode language ids
+// 4. *.human and *.bot are two Zed languages, as in vscode, so each can get its own settings later
+// 5. no tree-sitter grammar is made, Zed highlights through tree-sitter, so no colours without one; the human did not ask for it
+// 6. the zed/ folder does not exist yet, so the [path][line] pointers are targets and lint reports them as broken-pointer warnings until approve creates the files
+// 7. the Zed extension API is from my knowledge and is not checked against the current docs, verify the manifest keys at zed.dev/docs/extensions before approve
+// 8. publishing to the Zed extension registry is not in scope, only a dev extension install
+// 9. approved: the files exist under zed/ and cargo check passes on the host target; the wasm32-wasip1 target is not installed here, so the WASM build and a dev-extension install in Zed were not run
+// 10. extension.toml keys, the config.toml keys and zed_extension_api 0.7.0 come from my knowledge of Zed, check them in Zed when installing the dev extension
+// 11. the extension runs `onlyhuman` from the PATH (worktree.which), the user installs it with npm i -g onlyhuman; the lsp command exists as of this approve but is not yet published to npm
+// 12. [path][line] pointers were updated after coding, %language_server_command is at zed/src/lib.rs line 11

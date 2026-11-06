@@ -200,3 +200,24 @@ test('go-to-definition: a % child line in a .human jumps to the same % child und
   assert.deepEqual(definitionAt(human, 5, 3), { line: 5, col: 2, length: 4 })
   assert.deepEqual(definitionAt(human, 6, 3, robot), { line: 6, col: 2, length: 5 })
 })
+
+test('go-to-definition: postfix brackets on a % are parameter detail, the name is before the (', () => {
+  const human = parseText('@A\n- %list(limit = 20)\n- %run\n')
+  const robot = parseText('@A [./src/a.ts][3]\n- %list(limit: number) [./src/a.ts][25]\n- %run(arg=A) [./src/a.ts][30]\n')
+  assert.equal(definitionAt(human, 2, 3, robot)?.line, 2) // %list(limit = 20) -> %list(limit: number)
+  assert.equal(definitionAt(human, 2, 3, robot)?.file, 'robot')
+  assert.equal(definitionAt(human, 3, 3, robot)?.line, 3) // %run -> %run(arg=A)
+  assert.equal(pointerAt(robot, 2, 3)?.line, 25) // pointer after the brackets
+})
+
+test('lint: more than one prefix variable on a line is an error, operator lines are exempt', () => {
+  const rules = (text: string) => lint(parseText(text)).filter((d) => d.rule === 'multiple-prefix')
+  assert.equal(rules('$A\n- x\n\n@B\n- $A @B\n').length, 1)
+  assert.equal(rules('@A\n- @B %run\n').length, 1) // a % beside another prefix variable
+  assert.equal(rules('$A\n- x\n\n@B\n- $A -> run -> $A\n').length, 0) // flow line
+  assert.equal(rules('$A\n- x\n\n$B\n- $A + $A\n').length, 0) // combine line
+  assert.equal(rules('$A\n- $ @ ? #\n').length, 0) // bare prefixes name nothing
+  assert.equal(rules('$A\n- one // see $A and @B\n').length, 0) // a comment does not count
+  assert.equal(rules('$A\n- "$A @B"\n').length, 0) // quoted text is a word
+  assert.equal(rules('import o.human as @o\n\n@A\n- @o.$A\n').length, 0) // qualified reference is one variable
+})

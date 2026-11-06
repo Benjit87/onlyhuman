@@ -80,7 +80,7 @@ test('linter: an @alias is an @ definition, names are reachable only as @alias.n
   assert.deepEqual(noUnusedPage('@Page\n- import backend.human as @be\n- @xx.Api\n'), ['undefined-reference:@xx.Api is not defined', 'unused-definition:@be is defined but never referenced'])
   assert.deepEqual(noUnusedPage('@Page\n- import backend.human as @be\n- import backend.human as @be\n- @be.Api\n'), ['duplicate-definition:@be is already defined'])
   assert.deepEqual(noUnusedPage('@be\n- x\n@Page\n- import backend.human as @be\n- @be.Api\n'), ['duplicate-definition:@be is already defined'])
-  assert.deepEqual(noUnusedPage('@Page\n- import backend.human as @be\n- import backend.human\n- @Api @be.Api\n'), [])
+  assert.deepEqual(noUnusedPage('@Page\n- import backend.human as @be\n- import backend.human\n- @Api\n- @be.Api\n'), [])
   assert.deepEqual(noUnusedPage('@Page\n- import backend.human as @be\n- @be\n- @be.Api\n'), []) // a bare @be refers to the alias
   assert.deepEqual(noUnusedPage('@Page\n- import backend.human as be\n- x\n'), []) // a bare alias is plain text
   assert.deepEqual(noUnusedPage('@Page\n- @Page.\n- x\n'), []) // a trailing dot is not a qualifier
