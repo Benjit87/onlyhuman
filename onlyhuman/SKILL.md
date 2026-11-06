@@ -25,9 +25,10 @@ description: "Write, review and maintain onlyhuman specs, a descriptive language
 - @ prefix variable = service / class
 - ? prefix variable = state
 - $ prefix variable = entity / data
-- % prefix = method or intent or details, written on a child line (- %name), never as a header
-- "//" prefix = user comment, can be a note or an instruction
-- "#" prefix = user requirement statement
+- % prefix variable = method or intent or details, written on a child line (- %name), never as a header
+- "#" prefix variable = user requirement statement
+- only one prefix variable per line
+- "//" = additional user comment for that statement
 - "->" = logic flow
 - operator == can mean equal semantically or literally, robot decides
 - "+" operator means combine the behavior into a set
@@ -52,7 +53,7 @@ description: "Write, review and maintain onlyhuman specs, a descriptive language
 - *.bot is a detailed, concise version of *.human for the human to review
 - implementation follows the semantic meaning of the human-written tokens
 - carry every variable prefix and symbol from *.human into *.bot
-- for each prefix header, add a relative pointer to the implementing code line, e.g. [./example.txt][16]
+- for each prefix variable, add a relative pointer to the implementing code line, e.g. [./example.txt][16]
   - the path is relative to the nearest folder containing .git; if none, the parent of the spec/ folder
   - update line numbers after coding
 - list assumptions at the end of *.bot when *.human leaves something open

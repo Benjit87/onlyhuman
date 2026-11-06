@@ -28,10 +28,19 @@ $Structure
 - both *.bot and *.human have the same structure
 - consecutive-header is an error
 
+$PrefixVariable
+- only one prefix variable per line
+- in *.bot, they must have a pointer to the code e.g [./file.txt][10] , jump to line 10 of file.txt
+- support postfix brackets for additional parameter details e.g %method(arg=A)
+- prefix token
+  - $
+  - @
+  - ?
+  - #
+  - %
+
 $Token
-- $
-- @
-- ?
+- $PrefixVariable
 - //
 - #
 - ->
@@ -41,7 +50,6 @@ $Token
 - ==
 - -
 - word // a // inside quotes e.g "//" is a word, not a comment
-- % // attach to the name, e.g %tokenize, no space
 - "import"
   - "import module.human as @<alias>" // the @ is required, a bare alias is plain text
   - "@alias.api_service" // refers to @api_service of module.human, an alias is a qualifier that calls its service

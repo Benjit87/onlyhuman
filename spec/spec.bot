@@ -99,9 +99,32 @@ $Structure [./src/parser.ts][6]
 - *.human and *.bot use the same child and indentation rules
 - consecutive-header is an error: a prefix header must have at least one child line before the next prefix header; blank lines do not count
 
+$PrefixVariable [./src/types.ts][65]
+- only one prefix variable per line // not enforced by @Linter yet, see assumption 76
+- in *.bot, they must have a pointer to the code e.g [./file.txt][10], jump to line 10 of file.txt
+  - a pointer is the glued word [path][line], see $Data; applies to every prefix variable header and % child line of a *.bot
+  - %pointerAt in @GoToDefinition jumps from the header or % line to that code line [./src/definition.ts][232]
+  - broken-pointer in @Linter checks that a given pointer resolves [./src/linter.ts][21]
+  - a prefix variable with no pointer is not an error today, see assumption 79
+- support postfix brackets for additional parameter details e.g %method(arg=A)
+  - the brackets follow the name, glued, and carry parameter detail only; the name is what is before the `(`, so `%method(arg=A)` is the method `method`
+  - applies to every prefix variable, mainly % and the @ $ ? headers; the detail is never a reference and is ignored by @Linter
+  - go-to-definition matches a % by its name only, so `%method(arg=A)` in a *.human goes to `%method` in the *.bot whatever brackets either side has, see assumption 83
+  - a pointer after the brackets is still the glued [path][line] word, e.g `%method(arg=A) [./file.txt][10]`
+  - spaces inside the brackets split the line into several words; that is allowed, but write `%method(arg=A)` unspaced so the name word stays whole, see assumption 84
+- prefix token
+  - $ // entity or data
+  - @ // service or class
+  - ? // state
+  - # // user requirement statement, a header only, never a name reference
+  - % // method or intent or details, a child line only, never a header
+    - attached to the name, e.g %tokenize, no space
+    - the tokenizer emits it in any file, only the *.bot grammar highlights it
+- the code lists them as PREFIXES = @ $ ? # and SYMBOL_PREFIXES = @ $ ?; % has its own token kind, percent, so it is not in either list
+
 $Token [./src/types.ts][16]
 - every token has kind, text, line, col, length // 1-based line, 0-based col
-- prefixes are $ @ ? and #
+- $PrefixVariable // the prefix token kind, the $ @ ? # and % listed above
   - prefix token, followed by word as its name when attached e.g $Token = $ + word(Token)
   - alone is valid e.g `- $` inside $Token
   - parentheses adjacent to a prefix are punctuation, not part of the name
@@ -115,9 +138,6 @@ $Token [./src/types.ts][16]
   - space separated
 - dash // -
   - bullet if first on the line, else a - token
-- percent // %, marks a method or additional detail on a child line, never a header
-  - attached to the name, e.g %tokenize, no space
-  - the tokenizer emits it in any file, only the *.bot grammar highlights it
 - "import"
   - "import module.human as @<alias>" // the @ is required, a bare alias is plain text
     - as @<alias> gives the imported spec a local name; its definitions are then referenced as "@alias.api_service"
@@ -258,16 +278,17 @@ $Node [./src/types.ts][29]
     - the cursor in a comment returns none, the function does no file reading
   - %importAt(parsed: Parsed, line: number, col: number): string | undefined [./src/definition.ts][71] // on the file name of an import line, returns that file name so the caller opens it at line 1; the cursor on the alias after as does the same
     - returns none when the cursor is not on an import file name
-  - %pointerAt(parsed: Parsed, line: number, col: number): Pointer | undefined [./src/definition.ts][226] // in a *.bot, header or % line to its [path][line]
+  - %pointerAt(parsed: Parsed, line: number, col: number): Pointer | undefined [./src/definition.ts][232] // in a *.bot, header or % line to its [path][line]
     - the cursor must be on the % or its name for a % line, or on the definition name for a header
     - returns none when the line has no pointer, the caller checks that the file exists
   - %parsePointer(token: Token): Pointer | undefined [./src/definition.ts][111] // parse the glued [path][line] word without reading the file
   - %pointerOf(node: Node): Pointer | undefined [./src/definition.ts][117] // find the first pointer in a header or % child line
     - returns the first token of the line that parses as [path][line], none if there is none
-  - %methodAt(parsed: Parsed, line: number, col: number) [./src/definition.ts][189] // private helper of definitionAt for the % child rule
+  - %methodAt(parsed: Parsed, line: number, col: number) [./src/definition.ts][195] // private helper of definitionAt for the % child rule
     - the cursor must be on the % or on the name glued to it, returns the node, the name and the location
-  - %headerKey(node: Node): string | undefined [./src/definition.ts][199] // private helper, prefix + name or # + requirement text of a header
-  - %robotMethod(parsed: Parsed, node: Node, robot: Parsed, name: string): Location | undefined [./src/definition.ts][208] // private helper, finds the same %name under the same top-level header in the robot, any pointer is ignored
+  - %methodName(word: string): string [./src/definition.ts][189] // strips the postfix brackets, `list(limit = 20)` -> `list`, used by methodAt and robotMethod so a % matches by name only
+  - %headerKey(node: Node): string | undefined [./src/definition.ts][205] // private helper, prefix + name or # + requirement text of a header
+  - %robotMethod(parsed: Parsed, node: Node, robot: Parsed, name: string): Location | undefined [./src/definition.ts][214] // private helper, finds the same %name under the same top-level header in the robot, any pointer is ignored
 - found: returns line, col, length of the defining header
 - not found, or token is not an $ ? @ reference or an eligible header: returns none
 - parentheses around a prefixed symbol do not block navigation, e.g `(@Parser)` and `(?Parsed)` resolve on the symbol
@@ -459,7 +480,22 @@ $Node [./src/types.ts][29]
 // 68. unused-definition warnings for ?Data, @Parser, @LSP and @CLI are left as they are, spec.human is not changed by the robot
 // 69. onlyhuman-skill/SKILL.md was moved to onlyhuman/SKILL.md by the human and the two @Skill lines in spec.human say so; applied on approve to src/skill.ts, src/cli.ts help, package.json files, tests and README
 // 70. no code changed in this regen, so the [path][line] pointers were kept; the pointers of the removed @Highlighter section moved to vscode.bot
-// 71. spec.human line 3 still says "only read in onlyhuman-skill/SKILL.md"; that path no longer exists, so it is read as onlyhuman/SKILL.md; fix line 3 if the old path was meant
+// 71. superseded, spec.human now says onlyhuman/SKILL.md
 // 72. the source inside the package and the target in the user project both use the folder onlyhuman/, as the two @Skill lines say; the folder name matches the package name, so an existing onlyhuman/ folder in a user project is treated as the skill folder, and an existing SKILL.md there is not overwritten without --force
 // 73. the path rename is not migrated for users; an existing onlyhuman-skill/SKILL.md in a user project is left in place
 // 74. applied on approve: the source file is onlyhuman/SKILL.md in the repo; the old onlyhuman-skill/ entry shows as deleted in git and onlyhuman/ is untracked, nothing was staged or committed; dist/cli.js was rebuilt, the vscode bundle and .vsix were not; the [path][line] pointers were rechecked and the edits did not change any line numbers
+// 75. $PrefixVariable is new in spec.human: its first rule is "only one prefix variable per line", and $Token now lists $PrefixVariable in place of the separate $ @ ? lines; # was already a token line and stays in both
+// 76. "only one prefix variable per line" is not checked by @Linter today (a line like `$A @B` is accepted); add a rule if it should be an error, the human has not asked for one yet
+// 77. the per-prefix meanings under $PrefixVariable (entity, service, state, requirement, method) come from the skill's syntax definition, spec.human lists only the symbols
+// 78. % is now listed as a prefix token under $PrefixVariable, so the earlier note that % is not a prefix variable is dropped; in the code it stays a child-line token with kind percent and never a header, as the skill says
+// 79. "in *.bot, they must have a pointer" is read as every prefix variable header ($ @ ? #) and every % child line in a *.bot carries a [path][line] pointer; the linter only checks pointers that are present (broken-pointer), it has no missing-pointer rule, add one if wanted
+// 80. the existing *.bot files keep headers with no pointer where there is no implementing code, e.g. # version control points at package.json, but vscode.bot and some % lines may lack one; not audited in this regen
+// 81. the % line under $Token was removed from spec.human; its detail (attached to the name, no space, emitted in any file) moved under % in $PrefixVariable, and $Token reaches % through $PrefixVariable
+// 82. no code changed in this regen, so the [path][line] pointers were kept; the new $PrefixVariable header points at PREFIXES in src/types.ts
+// 83. "support postfix brackets" is read as: a (...) glued to the name is parameter detail, the name is the part before the (; the code does not do this yet, methodAt, robotMethod and pointerAt take the whole glued word as the name, so `%method(arg=A)` does not match `%method` and `%list(limit = 20)` splits into several words; run approve to implement stripping the brackets
+// 84. brackets with spaces such as `%list_job_executions(limit = 20)` tokenize as several words, the first one `list_job_executions(limit`; the spec says nothing about spaces, so unspaced brackets are recommended and the code will take the name up to the first (
+// 85. the "throw error if more than 1 $PrefixVariable is present in a line" line is gone from spec.human, so the multiple-prefix rule I proposed is not in this spec; "only one prefix variable per line" stays unchecked, see 76
+// 86. the end-of-file newline of spec.human changed (@Init line), no meaning change
+// 87. no code changed in this regen, so the [path][line] pointers were kept
+// 88. approved: postfix brackets are implemented in src/definition.ts through methodName; the % match ignores everything from the first ( on, in the .human and in the .bot; a test was added to tests/core.test.ts and the pointers of methodAt, headerKey, robotMethod and pointerAt moved by 6 lines
+// 89. approved: the linter was not changed, so broken-pointer still skips % lines (see the linter review) and one prefix variable per line is still not enforced
