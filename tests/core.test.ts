@@ -209,3 +209,15 @@ test('go-to-definition: postfix brackets on a % are parameter detail, the name i
   assert.equal(definitionAt(human, 3, 3, robot)?.line, 3) // %run -> %run(arg=A)
   assert.equal(pointerAt(robot, 2, 3)?.line, 25) // pointer after the brackets
 })
+
+test('lint: more than one prefix variable on a line is an error, operator lines are exempt', () => {
+  const rules = (text: string) => lint(parseText(text)).filter((d) => d.rule === 'multiple-prefix')
+  assert.equal(rules('$A\n- x\n\n@B\n- $A @B\n').length, 1)
+  assert.equal(rules('@A\n- @B %run\n').length, 1) // a % beside another prefix variable
+  assert.equal(rules('$A\n- x\n\n@B\n- $A -> run -> $A\n').length, 0) // flow line
+  assert.equal(rules('$A\n- x\n\n$B\n- $A + $A\n').length, 0) // combine line
+  assert.equal(rules('$A\n- $ @ ? #\n').length, 0) // bare prefixes name nothing
+  assert.equal(rules('$A\n- one // see $A and @B\n').length, 0) // a comment does not count
+  assert.equal(rules('$A\n- "$A @B"\n').length, 0) // quoted text is a word
+  assert.equal(rules('import o.human as @o\n\n@A\n- @o.$A\n').length, 0) // qualified reference is one variable
+})

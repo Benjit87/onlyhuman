@@ -7,7 +7,7 @@ import spec.human as @spec
 - all implementation is under the vscode folder, the grammars are @Highlighter; the server source stays in src/lsp/server.ts and is bundled in, see spec.bot
 - package as a .vsix, installed with code --install-extension
   - build: cd vscode, npm run build, then npx vsce package
-  - output: onlyhuman-vscode-<version>.vsix, version is 0.8.0 and is bumped per release
+  - output: onlyhuman-vscode-<version>.vsix, version is 0.9.0 and is bumped per release
   - install: code --install-extension onlyhuman-vscode-<version>.vsix
 - bundle the server and client with esbuild into vscode/dist
   - vscode/dist/server.js // from src/lsp/server.ts, with vscode-languageserver bundled in
@@ -75,7 +75,7 @@ import spec.human as @spec
 // assumptions, open points in vscode.human, change vscode.human if wrong
 // 1. "published to the marketplace" is a release requirement; the robot prepares and verifies the .vsix and asks before publishing, because publishing is a public, human-authorized step
 // 2. "all implementation will be under vscode folder" is read as: the client, grammars, bundle output and scripts live under vscode/, while the shared server source stays in src/lsp/server.ts and is bundled into vscode/dist, so it is not duplicated
-// 4. the vsix version is 0.8.0 from # version control in spec.human, vscode.human does not state a version
+// 4. the vsix version is 0.9.0 from # version control in spec.human, vscode.human does not state a version
 // 5. the pointers were carried over and not re-checked against code, since no code changed in this regen
 // 7. the cli was run on this file after the regen
 // 8. vscode.human now imports spec.human as @spec, so "@spec.$Token" under @Highlighter is a qualified reference to $Token in spec.human; the import is used, so the alias is not an unused-definition

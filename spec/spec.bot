@@ -4,8 +4,8 @@
 #implementation [./package.json][1]
 - implement a parser for onlyhuman skill syntax; this covers the *.human and *.bot spec language described here
 - language is TypeScript, development requires Node >= 22.18, strict mode
-- parser, linter and definition core are pure functions, no editor or fs dependency; @LSP and @CLI share them
-- @Linter and @GoToDefinition work on *.bot as well as *.human
+- parser, linter and definition core are pure functions, no editor or fs dependency // shared by @LSP and @CLI
+- go-to-definition works on *.bot as well as *.human, and so does @Linter
 - do not call the onlyhuman cli while building this project, it is what is being created; read onlyhuman/SKILL.md for the rules, and check the work with npm test
 - layout
   - src/types.ts // $Token $Node $Tokens types
@@ -17,7 +17,7 @@
   - src/lsp/server.ts // @LSP
   - src/autocomplete.ts // @AutoComplete, a pure function used by @LSP
   - src/cli.ts // @CLI
-  - src/skill.ts // @Skill copy operation
+  - src/skill.ts // @Init copy operation
   - onlyhuman/SKILL.md // Codex skill instructions and tooling
   - dist/cli.js // bundled CLI published to npm
   - npm.sh // build, verify and publish the CLI
@@ -33,9 +33,11 @@
 - [path][line] numbers are targets and get updated after coding, applies to every header
 
 # version control [./package.json][1]
-- version 0.8.0 is applied to package.json and vscode/package.json
+- version 0.9.0 is applied to package.json, vscode/package.json and zed/Cargo.toml
   - %vscodeManifest [./vscode/package.json][1] // keep the extension version aligned
-- package-lock.json and vscode/package-lock.json are in sync
+  - %zedManifest [./zed/Cargo.toml][1] // the version of the zed crate, the file name is Cargo.toml, spec.human writes it in lower case
+  - %zedExtension [./zed/extension.toml][1] // the version of the zed extension manifest is kept aligned too, see assumption 97
+- package-lock.json and vscode/package-lock.json are in sync, and zed/Cargo.lock when it is tracked
 - bump the version before publishing the npm package or the .vsix
 
 # npm package for cli [./package.json][1]
@@ -100,10 +102,12 @@ $Structure [./src/parser.ts][6]
 - consecutive-header is an error: a prefix header must have at least one child line before the next prefix header; blank lines do not count
 
 $PrefixVariable [./src/types.ts][65]
-- only one prefix variable per line // not enforced by @Linter yet, see assumption 76
+- only one prefix variable per line
+- more than one prefix variable on a line is an error // a -> + or == line is exempt
+  - the @Linter rule is multiple-prefix, see below
 - in *.bot, they must have a pointer to the code e.g [./file.txt][10], jump to line 10 of file.txt
   - a pointer is the glued word [path][line], see $Data; applies to every prefix variable header and % child line of a *.bot
-  - %pointerAt in @GoToDefinition jumps from the header or % line to that code line [./src/definition.ts][232]
+  - %pointerAt jumps from the header or % line to that code line [./src/definition.ts][232] // in @GoToDefinition
   - broken-pointer in @Linter checks that a given pointer resolves [./src/linter.ts][21]
   - a prefix variable with no pointer is not an error today, see assumption 79
 - support postfix brackets for additional parameter details e.g %method(arg=A)
@@ -154,7 +158,7 @@ $Token [./src/types.ts][16]
   - the next word is the file name, one file per line, resolved under the spec/ folder; a missing .human extension is not added
   - anywhere else on a line, or inside a comment_sentence, import is an ordinary word
   - a bare import line is exempt from no-prefix and consecutive-header, so it can start a line with no prefix
-  - meaning: every definition ($ @ ? #) of the named spec counts as defined in this file, see @Linter and @GoToDefinition
+  - meaning: every $ @ ? or # definition of the named spec counts as defined in this file, see @Linter and go-to-definition
 - word // can represent methods or a defined behavior or just a sentence, semantically driven
   - any other run of non-space characters e.g *.human, tokenize
   - a // is a comment only when it starts a space-separated run
@@ -202,7 +206,7 @@ $Node [./src/types.ts][29]
     - a child with no header above it stays at root, bad indentation is kept in the tree for @Linter to report
     - never throws, bad input still yields a tree
   - %parseText(text: string): Parsed [./src/parser.ts][53] // tokenize + parse in one call
-    - the entry point used by @Linter, @GoToDefinition, @LSP and @CLI
+    - the entry point used by @Linter, by go-to-definition, by the language server and by the CLI
 
 @Linter [./src/linter.ts][21]
 - ?Parsed -> lint -> diagnostics
@@ -216,7 +220,7 @@ $Node [./src/types.ts][29]
     - without file, the four file rules are skipped
 - diagnostic = rule, severity, line, col, length, message
 - definition = a header whose first token is $ ? or @ plus a name
-- reference = $ ? or @ plus a name anywhere outside a comment, names are case-sensitive and per prefix, so $Data != ?Data
+- reference = $ ? or @ plus a name anywhere outside a comment, names are case-sensitive and per prefix, so "$Data" and "?Data" are different names
 - the same rules run on *.human and *.bot
 - import <file>.human imports all relevant definitions
   - import <file>.human as @<alias> imports them under the alias, references must be "@alias.name", see "qualified imports" below
@@ -245,6 +249,7 @@ $Node [./src/types.ts][29]
   - undefined-reference // error: reference with no definition in this file or in an imported spec e.g $Nodee
   - duplicate-definition // error: same prefix + name defined twice, reported on the second
   - dangling-operator // error: an operator missing a left or right operand
+  - multiple-prefix // error: more than one prefix variable ($ @ ? # %) on one line, e.g `$A @B`; a line with an operator -> + or == is exempt, a bare prefix such as `- $`, quoted text and anything in a comment_sentence do not count
   - unused-definition // warning: defined but never referenced
   - missing-robot // warning: x.human has no sibling x.bot, only when the caller passes file info
   - missing-human // warning: x.bot has no sibling x.human, only when the caller passes file info
@@ -291,7 +296,7 @@ $Node [./src/types.ts][29]
   - %robotMethod(parsed: Parsed, node: Node, robot: Parsed, name: string): Location | undefined [./src/definition.ts][214] // private helper, finds the same %name under the same top-level header in the robot, any pointer is ignored
 - found: returns line, col, length of the defining header
 - not found, or token is not an $ ? @ reference or an eligible header: returns none
-- parentheses around a prefixed symbol do not block navigation, e.g `(@Parser)` and `(?Parsed)` resolve on the symbol
+- parentheses around a prefixed symbol do not block navigation, e.g "(@Parser)" and "(?Parsed)" resolve on the symbol
 - duplicates: first definition wins, @Linter reports the rest
 - cursor in a comment returns none
 - scope is one *.human file plus its sibling *.bot, plus the files named by its import lines, no other files
@@ -306,7 +311,7 @@ $Node [./src/types.ts][29]
   - cursor on a definition header of $ @ ? or # goes to the matching header in x.bot
   - # headers match by their full requirement text after #, excluding a trailing [path][line] pointer in x.bot
   - the robot header is found by parsing x.bot with the same @Parser, trailing [path][line] on the header is ignored
-  - found: location carries the robot file, so @LSP and @CLI can open another file
+  - found: location carries the robot file, so the language server and the CLI can open another file
   - no x.bot, or no such header in it: stays on the .human definition
   - cursor on a % child line goes to the same % child line in x.bot, under the same parent header
     - the parent header is found as for a definition header, then its children are searched for the same %name
@@ -350,13 +355,14 @@ $Node [./src/types.ts][29]
   - %onInitialize [./src/lsp/server.ts][29] // announces full text sync, definitionProvider and completionProvider
   - %validate(doc: TextDocument): void [./src/lsp/server.ts][37] // parse the text, lint it with file info when the uri is a file:, publish the diagnostics
     - lint line 1-based to lsp line 0-based, severity error or warning, code is the rule, source is onlyhuman
-  - %onDidOpen and %onDidChangeContent [./src/lsp/server.ts][63] // call validate on every open and change
+  - %onDidOpen [./src/lsp/server.ts][63] // call validate on every open
+  - %onDidChangeContent [./src/lsp/server.ts][64] // call validate on every change
   - %onDefinition(params) [./src/lsp/server.ts][66] // for a *.bot try @GoToDefinition pointerAt first and open the code file at the pointer line when it exists
     - otherwise call definitionAt, passing the sibling robot for a *.human and the import resolver, and answer with the robot, imported or current file
     - answers null when there is no document or no location
 - vscode client in ./vscode starts the server for files *.human, and *.bot
 
-@Skill [./src/skill.ts][1]
+@Init [./src/skill.ts][1]
 - source is the onlyhuman/SKILL.md that ships inside the onlyhuman library, fixed in the library, not looked up from the user path
   - %initSkill(directory: string = ".", options?: InitSkillOptions): string [./src/skill.ts][13] // copy the library skill file into <directory>/onlyhuman/SKILL.md, return the target path
     - throws when the library file is missing, or when the target exists and options.force is not set
@@ -379,13 +385,27 @@ $Node [./src/types.ts][29]
 - tests assert the copied file matches onlyhuman/SKILL.md and ignores a different SKILL.md in the user project
 
 @CLI [./src/cli.ts][29]
+- version -> show version number
+- cli def supports both name form and position form
+- @LSP // onlyhuman lsp runs the language server over stdio
 - @GoToDefinition
 - @Linter
-- @Skill
+- @Init
 - method signatures
-  - %main(argv: string[]): number [./src/cli.ts][29] // dispatch lint, def and skill init, returns the exit code, prints the usage and returns 2 on a bad command
-  - %load(file: string): Parsed [./src/cli.ts][25] // read the file as utf-8 and parseText it
-  - %notFound(what: string): number [./src/cli.ts][99] // print "no definition for <what>" to stderr and return 1
+  - %main(argv: string[]): number [./src/cli.ts][38] // dispatch lint, def, --version and skill init, returns the exit code, prints the usage and returns 2 on a bad command
+  - %load(file: string): Parsed [./src/cli.ts][34] // read the file as utf-8 and parseText it
+  - %notFound(what: string): number [./src/cli.ts][117] // print "no definition for <what>" to stderr and return 1
+- onlyhuman --version // also -v
+  - %version [./src/cli.ts][29] // prints the version of the installed onlyhuman package and returns 0
+    - the number is the version field of the package's own package.json, found from the running file, so src/cli.ts and dist/cli.js both read ../package.json
+    - prints only the number, e.g. 0.9.0, one line on stdout, no prefix
+    - only the flags --version and -v, there is no `version` command; the flag must be the only argument, anything else prints the usage and returns 2
+    - package.json is already shipped in an npm package, so no files entry is needed
+- onlyhuman lsp
+  - %lsp [./src/cli.ts][123] // runs the @LSP server over stdio, so an editor can start `onlyhuman lsp` instead of a path into this repo
+    - the command takes no arguments, more than one prints the usage and returns 2
+    - it stays running until the client sends exit, the exit code is the server's
+    - the server code is src/lsp/server.ts, the same one the vscode client starts, see @LSP
 - onlyhuman skill init
   - %skillInit [./src/cli.ts][32] // parse the command and call initSkill
     - at most one directory argument, more than one prints the usage and returns 2
@@ -421,9 +441,9 @@ $Node [./src/types.ts][29]
 // 9. package name availability is not checked until publish; the current name is onlyhuman and the scoped fallback is "@benjit87/onlyhuman"
 // 10. the npm package exports only the CLI; the parser API remains internal until the human asks for it
 // 11. # version control applies 0.8.0 to package.json, vscode/package.json and both lockfiles
-// 12. @Skill is exposed as onlyhuman skill init and writes onlyhuman/SKILL.md under the given directory
+// 12. @Init is exposed as onlyhuman skill init and writes onlyhuman/SKILL.md under the given directory
 // 13. skill init refuses to overwrite an existing onlyhuman/SKILL.md unless --force is passed
-// 14. @Skill in spec.human has no flow line now; --force, create-directory and print-path behaviour are kept from the previous spec as details
+// 14. @Init in spec.human has no flow line now; --force, create-directory and print-path behaviour are kept from the previous spec as details
 // 15. "fixed in the library" is read as a file shipped in the npm package and located relative to the running code, not a copy embedded in source
 // 16. the target is literally onlyhuman/SKILL.md; existing .onlyhuman/SKILL.md files are left in place and are not migrated
 // 17. consecutive-header applies only to prefix headers (@ ? $ #); comment headers are not counted, and a final header with no child is not flagged unless a separate empty-header rule is added
@@ -478,10 +498,10 @@ $Node [./src/types.ts][29]
 // 66. @Highlighter moved from spec.human to vscode.human and the line naming it was removed from #implementation, so spec.human no longer has an undefined reference; "work on *.bot as well as *.human" now covers @Linter and @GoToDefinition only
 // 67. the per-token colour list that was under @Highlighter in spec.human was dropped by the human; the grammar itself is unchanged and keeps its scopes, see vscode.bot
 // 68. unused-definition warnings for ?Data, @Parser, @LSP and @CLI are left as they are, spec.human is not changed by the robot
-// 69. onlyhuman-skill/SKILL.md was moved to onlyhuman/SKILL.md by the human and the two @Skill lines in spec.human say so; applied on approve to src/skill.ts, src/cli.ts help, package.json files, tests and README
+// 69. onlyhuman-skill/SKILL.md was moved to onlyhuman/SKILL.md by the human and the two @Init lines in spec.human say so; applied on approve to src/skill.ts, src/cli.ts help, package.json files, tests and README
 // 70. no code changed in this regen, so the [path][line] pointers were kept; the pointers of the removed @Highlighter section moved to vscode.bot
 // 71. superseded, spec.human now says onlyhuman/SKILL.md
-// 72. the source inside the package and the target in the user project both use the folder onlyhuman/, as the two @Skill lines say; the folder name matches the package name, so an existing onlyhuman/ folder in a user project is treated as the skill folder, and an existing SKILL.md there is not overwritten without --force
+// 72. the source inside the package and the target in the user project both use the folder onlyhuman/, as the two @Init lines say; the folder name matches the package name, so an existing onlyhuman/ folder in a user project is treated as the skill folder, and an existing SKILL.md there is not overwritten without --force
 // 73. the path rename is not migrated for users; an existing onlyhuman-skill/SKILL.md in a user project is left in place
 // 74. applied on approve: the source file is onlyhuman/SKILL.md in the repo; the old onlyhuman-skill/ entry shows as deleted in git and onlyhuman/ is untracked, nothing was staged or committed; dist/cli.js was rebuilt, the vscode bundle and .vsix were not; the [path][line] pointers were rechecked and the edits did not change any line numbers
 // 75. $PrefixVariable is new in spec.human: its first rule is "only one prefix variable per line", and $Token now lists $PrefixVariable in place of the separate $ @ ? lines; # was already a token line and stays in both
@@ -499,3 +519,29 @@ $Node [./src/types.ts][29]
 // 87. no code changed in this regen, so the [path][line] pointers were kept
 // 88. approved: postfix brackets are implemented in src/definition.ts through methodName; the % match ignores everything from the first ( on, in the .human and in the .bot; a test was added to tests/core.test.ts and the pointers of methodAt, headerKey, robotMethod and pointerAt moved by 6 lines
 // 89. approved: the linter was not changed, so broken-pointer still skips % lines (see the linter review) and one prefix variable per line is still not enforced
+// 90. spec.human names the section @Init; the previous spec.bot called it @Skill, so it is renamed to @Init here, in the layout line and in @CLI; the old notes that say @Skill refer to this section
+// 91. "@LSP // for running the lsp server" under @CLI is read as: the CLI gets an `onlyhuman lsp` command that starts the language server over stdio; the human did not name the command, `lsp` follows the existing lint, def and skill names
+// 92. decided on approve: the server is bundled into dist/cli.js with vscode-languageserver, so the CLI still has no runtime npm dependencies; build:cli got a createRequire banner because the ESM bundle cannot require node built-ins
+// 93. approved: `onlyhuman lsp` is implemented at the end of src/cli.ts, before the main call, because the server loads on import; it adds --stdio when the client did not pass it, and extra arguments print the usage and return 2
+// 94. verified: the bundled `node dist/cli.js lsp` answers initialize with the server capabilities and exits 0 after shutdown and exit
+// 95. the existing npm script "lsp" (node src/lsp/server.ts --stdio) stays for local development
+// 96. the %lsp pointer is the lsp branch in src/cli.ts, not %main, since it runs outside main; zed work is in zed.bot
+// 97. spec.human now says version 0.9.0 and lists zed/cargo.toml; the human named only Cargo.toml for zed, but zed/extension.toml also carries a version and Zed reads that one, so it is bumped with it, say so if it should stay at 0.8.0
+// 98. "zed/cargo.toml" in spec.human is read as zed/Cargo.toml, the file on disk; macOS is case-insensitive, other systems are not
+// 99. the version 0.9.0 is not applied yet, package.json, vscode/package.json and the zed files still say 0.8.0 until approve; the older notes that say 0.8.0 describe the earlier approve
+// 100. no code changed in this regen, so the [path][line] pointers were kept
+// 101. approved: 0.9.0 is applied to package.json, vscode/package.json, zed/Cargo.toml and zed/extension.toml, plus the package's own version lines in package-lock.json, vscode/package-lock.json and zed/Cargo.lock; the other 0.8.0 strings in the lockfiles are dependency and engine versions and were left; the .vsix is not rebuilt
+// 102. "version -> show version number" under @CLI is read as an `onlyhuman version` command; the human gave no flag, so `--version` and `-v` are accepted as aliases because that is what users type
+// 103. the number is read from the package's package.json at run time, not copied into the source, so a version bump needs no code edit; the bundle in dist/ reads the package.json next to it in the npm package
+// 104. version -> is read as a flow: the command `version` leads to showing the number; it is not a bare word of the spec, so lint does not treat it as a reference
+// 105. `onlyhuman version` is not implemented yet, so the %version pointer is the %main dispatch; updated on approve
+// 106. no other code changed in this regen, so the [path][line] pointers were kept
+// 107. answered on this regen: "more than one prefix variable on a line is an error // a -> + or == line is exempt" is the new multiple-prefix rule; it is not implemented yet, so it is added on approve; spec.human and the existing .bot files must lint clean under it, which the exemption is for
+// 108. the human chose flag only for the version: `onlyhuman --version` and `-v`, so the `version` command and note 102 are superseded; notes 103-105 still hold, the number is read from package.json
+// 109. the human chose to name the lsp command in the @LSP line: `onlyhuman lsp`, the same as note 91
+// 110. the typos explaination, parethnesis and sould were fixed in spec.human, so notes 29 and the `definations` mention are done; "definations" no longer appears
+// 111. still open: no missing-pointer rule, the human did not choose one; broken-pointer still skips % lines, see the linter review
+// 112. approved: --version and -v are implemented in src/cli.ts through version(), which reads ../package.json relative to the running file; `node dist/cli.js --version` prints 0.9.0, an extra argument prints the usage and returns 2
+// 113. approved: multiple-prefix is implemented as checkPrefixes in src/linter.ts [./src/linter.ts][133], error severity; it counts a $ @ ? # or % that is glued to a name, so bare prefixes, quoted text and comments do not count, a line with -> + or == is exempt, and the $ or ? after the dot of "@alias.$Name" belongs to the same variable
+// 114. to make the rule pass, nine prose lines of this spec.bot that named several symbols were reworded, e.g. "@LSP and @CLI share them" is now a comment; no meaning was dropped, and %onDidOpen and %onDidChangeContent are now two % lines; the line numbers in tests/import.test.ts: a fixture `- @Api @be.Api` was split over two lines
+// 115. tests: 38 pass, a new test in tests/core.test.ts covers the rule; the [path][line] pointers for src/cli.ts were updated after coding

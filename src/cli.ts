@@ -1,6 +1,7 @@
 #!/usr/bin/env node
-// @CLI: onlyhuman lint <file> | onlyhuman def <name> <file> | onlyhuman def <file>:<line>:<col> | onlyhuman skill init
+// @CLI: onlyhuman lint <file> | onlyhuman def <name> <file> | onlyhuman def <file>:<line>:<col> | onlyhuman skill init | onlyhuman lsp | onlyhuman --version
 import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { relative } from 'node:path'
 import { definitionAt, findDefinition, pointerAt } from './definition.ts'
 import {
@@ -20,7 +21,15 @@ const USAGE = `usage:
   onlyhuman lint <file>             *.human or *.bot
   onlyhuman def <name> <file>        e.g. onlyhuman def '$Token' spec.human
   onlyhuman def <file>:<line>:<col>  1-based line and col
-  onlyhuman skill init [directory] [--force]  write onlyhuman/SKILL.md`
+  onlyhuman skill init [directory] [--force]  write onlyhuman/SKILL.md
+  onlyhuman lsp                      run the language server over stdio
+  onlyhuman --version | -v           show the version number`
+
+// the version field of the package's own package.json, one level above src/ and dist/
+function version(): string {
+  const file = fileURLToPath(new URL('../package.json', import.meta.url))
+  return JSON.parse(readFileSync(file, 'utf8')).version
+}
 
 function load(file: string) {
   return parseText(readFileSync(file, 'utf8'))
@@ -28,6 +37,15 @@ function load(file: string) {
 
 function main(argv: string[]): number {
   const [cmd, ...rest] = argv
+
+  if (cmd === '--version' || cmd === '-v') {
+    if (rest.length) {
+      console.error(USAGE)
+      return 2
+    }
+    console.log(version())
+    return 0
+  }
 
   if (cmd === 'skill' && rest[0] === 'init') {
     const args = rest.slice(1)
@@ -101,6 +119,15 @@ function notFound(what: string): number {
   return 1
 }
 
+// onlyhuman lsp: start the language server over stdio, it runs until the client exits
+if (process.argv[2] === 'lsp') {
+  if (process.argv.length > 3) {
+    console.error(USAGE)
+    process.exit(2)
+  }
+  if (!process.argv.includes('--stdio')) process.argv.push('--stdio')
+  await import('./lsp/server.ts')
+} else
 try {
   process.exit(main(process.argv.slice(2)))
 } catch (e) {

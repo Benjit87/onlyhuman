@@ -1,0 +1,3 @@
+name = "onlyhuman"
+path_suffixes = ["human"]
+line_comments = ["// "]

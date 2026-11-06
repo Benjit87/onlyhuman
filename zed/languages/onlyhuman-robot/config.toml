@@ -1,0 +1,3 @@
+name = "onlyhuman-robot"
+path_suffixes = ["bot"]
+line_comments = ["// "]

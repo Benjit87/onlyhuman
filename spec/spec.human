@@ -6,9 +6,10 @@
 - describe every method under each service name in details via %
 
 # version control
-- version: 0.8.0
+- version: 0.9.0
 - update for all modules
   - vscode/package.json
+  - zed/cargo.toml
   - package.json
 
 # npm package for cli
@@ -30,6 +31,7 @@ $Structure
 
 $PrefixVariable
 - only one prefix variable per line
+- more than one prefix variable on a line is an error // a -> + or == line is exempt
 - in *.bot, they must have a pointer to the code e.g [./file.txt][10] , jump to line 10 of file.txt
 - support postfix brackets for additional parameter details e.g %method(arg=A)
 - prefix token
@@ -75,13 +77,13 @@ $Tokens
 - $Tokens + $Structure -> parser -> ?Parsed
 
 @GoToDefinition
-- provide relevant method signatures with some explaination
+- provide relevant method signatures with some explanation
 - single .human file plus its sibling *.bot only
 - on a definition header of $,@,?,# go to the same header in the *.bot
 - on a % child line go to the same % child line under the same header in the *.bot
 - for % in *.bot it means go to the code file and line
 - if no *.bot or header, stay on the definition
-- parethnesis like () is ignored ( e.g '(?Parser)' ) the go to definition sould work
+- parenthesis like () is ignored ( e.g '(?Parser)' ) the go to definition should work
 - import file.human , goes to the target file
 - @<alias> or the file name in an import goes to the target file
 - "@alias.api_service" goes to "@api_service" in the target file
@@ -93,7 +95,7 @@ $Tokens
 - works in *.human and *.bot
 
 @Linter
-- provide relevant method signatures with some explaination
+- provide relevant method signatures with some explanation
 - unused-definition is a warning
 - missing-robot only checked when file info is passed
 - [path][line] target must exist, warning if the file or line is missing
@@ -114,7 +116,9 @@ $Tokens
 - target is onlyhuman/SKILL.md under the user path
 
 @CLI
+- version -> show version number // onlyhuman --version and -v only
 - cli def supports both name form and position form
+- @LSP // onlyhuman lsp runs the language server over stdio
 - @GoToDefinition
 - @Linter
 - @Init
