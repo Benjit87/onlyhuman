@@ -1,0 +1,14 @@
+{
+  "name": "onlyhuman",
+  "description": "Skill for writing and reviewing onlyhuman specs: you write concise *.human intent, the agent generates the detailed *.bot for review, then implements it on approval.",
+  "owner": {
+    "name": "benjit87"
+  },
+  "plugins": [
+    {
+        "name": "onlyhuman-skills",
+        "source": "./",
+        "description": "Skill for writing and reviewing onlyhuman specs: you write concise *.human intent, the agent generates the detailed *.bot for review, then implements it on approval."
+    }
+  ]
+}

@@ -6,7 +6,7 @@
 - language is TypeScript, development requires Node >= 22.18, strict mode
 - parser, linter and definition core are pure functions, no editor or fs dependency // shared by @LSP and @CLI
 - go-to-definition works on *.bot as well as *.human, and so does @Linter
-- do not call the onlyhuman cli while building this project, it is what is being created; read onlyhuman/SKILL.md for the rules, and check the work with npm test
+- do not call the onlyhuman cli while building this project, it is what is being created; read skills/onlyhuman/SKILL.md for the rules, and check the work with npm test
 - layout
   - src/types.ts // $Token $Node $Tokens types
   - src/tokenizer.ts // $Data -> $Tokens
@@ -18,7 +18,8 @@
   - src/autocomplete.ts // @AutoComplete, a pure function used by @LSP
   - src/cli.ts // @CLI
   - src/skill.ts // @Init copy operation
-  - onlyhuman/SKILL.md // Codex skill instructions and tooling
+  - skills/onlyhuman/SKILL.md // the skill instructions and tooling, the plugin layout skills/<name>/SKILL.md
+  - .claude-plugin/plugin.json // Claude plugin manifest, name onlyhuman, version aligned, see assumption 117
   - dist/cli.js // bundled CLI published to npm
   - npm.sh // build, verify and publish the CLI
   - vscode/ // thin client, starts the lsp for *.human and *.bot
@@ -363,26 +364,26 @@ $Node [./src/types.ts][29]
 - vscode client in ./vscode starts the server for files *.human, and *.bot
 
 @Init [./src/skill.ts][1]
-- source is the onlyhuman/SKILL.md that ships inside the onlyhuman library, fixed in the library, not looked up from the user path
-  - %initSkill(directory: string = ".", options?: InitSkillOptions): string [./src/skill.ts][13] // copy the library skill file into <directory>/onlyhuman/SKILL.md, return the target path
+- source is the skills/onlyhuman/SKILL.md that ships inside the onlyhuman library, fixed in the library, not looked up from the user path
+  - %initSkill(directory: string = ".", options?: InitSkillOptions): string [./src/skill.ts][13] // copy the library skill file into <directory>/skills/onlyhuman/SKILL.md, return the target path
     - throws when the library file is missing, or when the target exists and options.force is not set
     - creates the onlyhuman directory when missing, then copies byte-for-byte
   - %InitSkillOptions [./src/skill.ts][6] // force?: boolean, allow replacing an existing target
   - the source path is resolved from the library's own location, e.g. import.meta.url, never from <directory> or the current directory
-  - onlyhuman/SKILL.md is listed in package.json files so it is present after npm i
+  - skills and .claude-plugin are listed in package.json files so the skill is present after npm i
   - fail with a clear error when the library skill file cannot be found
 - copy as is, no generating or editing
   - byte-for-byte with copyFileSync
 - nothing from the user repo is used
   - a SKILL.md in the user repo is neither read nor replaced by the source
-- target is onlyhuman/SKILL.md under the user path
+- target is skills/onlyhuman/SKILL.md under the user path
   - create the onlyhuman directory when missing
   - refuse to overwrite an existing target without --force
   - print the written path
 - validation
-  - the source onlyhuman/SKILL.md must pass skill-creator quick_validate.py
+  - the source skills/onlyhuman/SKILL.md must pass skill-creator quick_validate.py
   - onlyhuman lint validates .human and .bot specs, not Markdown
-- tests assert the copied file matches onlyhuman/SKILL.md and ignores a different SKILL.md in the user project
+- tests assert the copied file matches skills/onlyhuman/SKILL.md and ignores a different SKILL.md in the user project
 
 @CLI [./src/cli.ts][29]
 - version -> show version number
@@ -410,7 +411,7 @@ $Node [./src/types.ts][29]
   - %skillInit [./src/cli.ts][32] // parse the command and call initSkill
     - at most one directory argument, more than one prints the usage and returns 2
     - an initSkill error is printed to stderr and returns 1, success prints "created <path>" and returns 0
-  - copy the library skill file as is to onlyhuman/SKILL.md under the given directory
+  - copy the library skill file as is to skills/onlyhuman/SKILL.md under the given directory
   - create onlyhuman when missing
   - fail if the library skill file is missing
   - do not overwrite an existing file without --force
@@ -545,3 +546,8 @@ $Node [./src/types.ts][29]
 // 113. approved: multiple-prefix is implemented as checkPrefixes in src/linter.ts [./src/linter.ts][133], error severity; it counts a $ @ ? # or % that is glued to a name, so bare prefixes, quoted text and comments do not count, a line with -> + or == is exempt, and the $ or ? after the dot of "@alias.$Name" belongs to the same variable
 // 114. to make the rule pass, nine prose lines of this spec.bot that named several symbols were reworded, e.g. "@LSP and @CLI share them" is now a comment; no meaning was dropped, and %onDidOpen and %onDidChangeContent are now two % lines; the line numbers in tests/import.test.ts: a fixture `- @Api @be.Api` was split over two lines
 // 115. tests: 38 pass, a new test in tests/core.test.ts covers the rule; the [path][line] pointers for src/cli.ts were updated after coding
+// 116. approved after the human moved the skill: the library source is skills/onlyhuman/SKILL.md (spec.human lines 3 and 113), and the target in a user project is now skills/onlyhuman/SKILL.md too (spec.human line 116, chosen on the question), so the skill folder mirrors the plugin layout; notes 12, 13, 16 and 69-74 describe the earlier onlyhuman/SKILL.md path
+// 117. .claude-plugin/plugin.json is not named in spec.human, it is listed in the layout because the human added it; its version should match # version control, it says 0.9.0 now; the human has not asked for it in the version list
+// 118. package.json files now lists skills and .claude-plugin instead of onlyhuman/SKILL.md, so both ship in the npm package; the vscode client does not use them
+// 119. an existing <dir>/onlyhuman/SKILL.md written by an earlier version is left in place and not migrated; init now writes <dir>/skills/onlyhuman/SKILL.md next to it, so a project can hold both
+// 120. applied: src/skill.ts, src/cli.ts usage, tests/skill.test.ts, doc/DETAILS.md and skills/onlyhuman/SKILL.md line 71 use the new paths; 38 tests pass and a manual skill init wrote the new target
