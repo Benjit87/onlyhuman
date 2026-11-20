@@ -6,7 +6,7 @@
 - describe every method under each service name in details via %
 
 # version control
-- version: 0.9.0
+- version: 0.10.0
 - update for all modules
   - vscode/package.json
   - zed/cargo.toml
@@ -31,7 +31,6 @@ $Structure
 
 $PrefixVariable
 - only one prefix variable per line
-- more than one prefix variable on a line is an error // a -> + or == line is exempt
 - in *.bot, they must have a pointer to the code e.g [./file.txt][10] , jump to line 10 of file.txt
 - support postfix brackets for additional parameter details e.g %method(arg=A)
 - prefix token

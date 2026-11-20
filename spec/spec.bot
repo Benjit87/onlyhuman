@@ -19,7 +19,7 @@
   - src/cli.ts // @CLI
   - src/skill.ts // @Init copy operation
   - skills/onlyhuman/SKILL.md // the skill instructions and tooling, the plugin layout skills/<name>/SKILL.md
-  - .claude-plugin/plugin.json // Claude plugin manifest, name onlyhuman, version aligned, see assumption 117
+  - .claude-plugin/plugin.json // Claude plugin manifest, name onlyhuman, version aligned, see assumption 53
   - dist/cli.js // bundled CLI published to npm
   - npm.sh // build, verify and publish the CLI
   - vscode/ // thin client, starts the lsp for *.human and *.bot
@@ -34,10 +34,10 @@
 - [path][line] numbers are targets and get updated after coding, applies to every header
 
 # version control [./package.json][1]
-- version 0.9.0 is applied to package.json, vscode/package.json and zed/Cargo.toml
+- version 0.10.0 is applied to package.json, vscode/package.json and zed/Cargo.toml
   - %vscodeManifest [./vscode/package.json][1] // keep the extension version aligned
   - %zedManifest [./zed/Cargo.toml][1] // the version of the zed crate, the file name is Cargo.toml, spec.human writes it in lower case
-  - %zedExtension [./zed/extension.toml][1] // the version of the zed extension manifest is kept aligned too, see assumption 97
+  - %zedExtension [./zed/extension.toml][1] // the version of the zed extension manifest is kept aligned too, see assumption 49
 - package-lock.json and vscode/package-lock.json are in sync, and zed/Cargo.lock when it is tracked
 - bump the version before publishing the npm package or the .vsix
 
@@ -104,19 +104,17 @@ $Structure [./src/parser.ts][6]
 
 $PrefixVariable [./src/types.ts][65]
 - only one prefix variable per line
-- more than one prefix variable on a line is an error // a -> + or == line is exempt
-  - the @Linter rule is multiple-prefix, see below
 - in *.bot, they must have a pointer to the code e.g [./file.txt][10], jump to line 10 of file.txt
   - a pointer is the glued word [path][line], see $Data; applies to every prefix variable header and % child line of a *.bot
   - %pointerAt jumps from the header or % line to that code line [./src/definition.ts][232] // in @GoToDefinition
   - broken-pointer in @Linter checks that a given pointer resolves [./src/linter.ts][21]
-  - a prefix variable with no pointer is not an error today, see assumption 79
+  - a prefix variable with no pointer is not an error today, see assumption 40
 - support postfix brackets for additional parameter details e.g %method(arg=A)
   - the brackets follow the name, glued, and carry parameter detail only; the name is what is before the `(`, so `%method(arg=A)` is the method `method`
   - applies to every prefix variable, mainly % and the @ $ ? headers; the detail is never a reference and is ignored by @Linter
-  - go-to-definition matches a % by its name only, so `%method(arg=A)` in a *.human goes to `%method` in the *.bot whatever brackets either side has, see assumption 83
+  - go-to-definition matches a % by its name only, so `%method(arg=A)` in a *.human goes to `%method` in the *.bot whatever brackets either side has, see assumption 42
   - a pointer after the brackets is still the glued [path][line] word, e.g `%method(arg=A) [./file.txt][10]`
-  - spaces inside the brackets split the line into several words; that is allowed, but write `%method(arg=A)` unspaced so the name word stays whole, see assumption 84
+  - spaces inside the brackets split the line into several words; that is allowed, but write `%method(arg=A)` unspaced so the name word stays whole, see assumption 42
 - prefix token
   - $ // entity or data
   - @ // service or class
@@ -250,7 +248,6 @@ $Node [./src/types.ts][29]
   - undefined-reference // error: reference with no definition in this file or in an imported spec e.g $Nodee
   - duplicate-definition // error: same prefix + name defined twice, reported on the second
   - dangling-operator // error: an operator missing a left or right operand
-  - multiple-prefix // error: more than one prefix variable ($ @ ? # %) on one line, e.g `$A @B`; a line with an operator -> + or == is exempt, a bare prefix such as `- $`, quoted text and anything in a comment_sentence do not count
   - unused-definition // warning: defined but never referenced
   - missing-robot // warning: x.human has no sibling x.bot, only when the caller passes file info
   - missing-human // warning: x.bot has no sibling x.human, only when the caller passes file info
@@ -399,7 +396,7 @@ $Node [./src/types.ts][29]
 - onlyhuman --version // also -v
   - %version [./src/cli.ts][29] // prints the version of the installed onlyhuman package and returns 0
     - the number is the version field of the package's own package.json, found from the running file, so src/cli.ts and dist/cli.js both read ../package.json
-    - prints only the number, e.g. 0.9.0, one line on stdout, no prefix
+    - prints only the number, e.g. 0.10.0, one line on stdout, no prefix
     - only the flags --version and -v, there is no `version` command; the flag must be the only argument, anything else prints the usage and returns 2
     - package.json is already shipped in an npm package, so no files entry is needed
 - onlyhuman lsp
@@ -431,123 +428,56 @@ $Node [./src/types.ts][29]
 - @LSP passes file info too when the file is on disk
 
 // assumptions, open points in spec.human, change spec.human if wrong
-// 1. @GoToDefinition and @Linter list their public method or grammar-rule signatures with brief explanations; private helpers are omitted
-// 2. superseded, @Highlighter is no longer defined in spec.human, see 66
-// 3. superseded, see 66; the TextMate scope notes now live in vscode.bot
-// 4. the vscode deployment section moved to vscode.human; its generated spec and assumptions are in vscode.bot
-// 5. development uses Node >= 22.18; the bundled server targets the Node runtime shipped with VS Code, and the CLI bundle targets node20
-// 6. in a *.bot, go-to-definition on a header or % line goes to its code pointer, not back to the .human header; the .human definition remains the source of intent
-// 7. npm.sh uses a project-local .npm-cache so the publish flow does not depend on the state of the global npm cache
-// 8. the CLI bundle uses esbuild and targets Node 20 even though development uses Node 22.18; the source-TypeScript alternative keeps Node >=22.18
-// 9. package name availability is not checked until publish; the current name is onlyhuman and the scoped fallback is "@benjit87/onlyhuman"
-// 10. the npm package exports only the CLI; the parser API remains internal until the human asks for it
-// 11. # version control applies 0.8.0 to package.json, vscode/package.json and both lockfiles
-// 12. @Init is exposed as onlyhuman skill init and writes onlyhuman/SKILL.md under the given directory
-// 13. skill init refuses to overwrite an existing onlyhuman/SKILL.md unless --force is passed
-// 14. @Init in spec.human has no flow line now; --force, create-directory and print-path behaviour are kept from the previous spec as details
-// 15. "fixed in the library" is read as a file shipped in the npm package and located relative to the running code, not a copy embedded in source
-// 16. the target is literally onlyhuman/SKILL.md; existing .onlyhuman/SKILL.md files are left in place and are not migrated
-// 17. consecutive-header applies only to prefix headers (@ ? $ #); comment headers are not counted, and a final header with no child is not flagged unless a separate empty-header rule is added
-// 18. the example '(?Parser)' is read as a state name; ?Parser is undefined in this spec, so the example covers recognition inside parentheses, not a successful lookup
-// 19. only parentheses are treated as ignored punctuation; other punctuation such as commas remains a separate word
-// 20. "import" is now tool-supported: @Linter, @GoToDefinition and the grammar in vscode.bot handle it; before this regen it was a robot-only convention
-// 21. "*.human" in the import line is read as a placeholder for a spec file name such as backend.human, resolved under spec/, not a glob; "import all" means every $ @ ? # header of that file
-// 22. "starts in a new line" is read as: import is the first word of its own line, one file per line; it may be bare (no prefix, exempt from no-prefix) or a child line after a bullet
-// 23. "relevant definitions" is read as all definitions of the imported spec; unused-definition is not applied to imported names
-// 24. the human did not say what happens when the file is missing, so unresolved-import is added as an error, only when file info is passed
-// 25. imports are one level only, so no cycle rule is needed; transitive imports and cycle detection are left out
-// 26. a local definition with the same name as an imported one wins and is not reported as a duplicate
-// 27. go-to-definition on a reference to an imported name jumps to the imported file; the human only wrote "import file.human, goes to the target file", so this is an extension
-// 28. the method pointers for %importAt and the unresolved-import rule were checked against the code on this regen and resolve to existing lines
-// 29. spec.human lines 45 and 97 spell "definations"; read as "definitions", fix the spelling in spec.human if unintended
-// 30. a % child line in a *.human is matched to a % child of the same name under the same parent header in the *.bot, not globally, since one name can appear under several headers
-// 31. when the *.bot has no matching % child, go-to-definition stays on the .human line, same as for headers
-// 32. % stays a child-line token only, never a header, so the linter and PREFIXES are unchanged
-// 33. the % child rule is implemented in definitionAt through methodAt and robotMethod, with a test in tests/core.test.ts; pointers were updated after coding
-// 34. "a % in a *.human has no robot target" from the previous bot is removed, it is superseded by the new % child line rule
-// 35. version 0.7.0 was applied on an earlier approve, 0.8.0 was applied on this one to package.json, vscode/package.json and both lockfiles, only the package's own version lines, not dependency versions
-// 36. "describe every method under each service name in details via %" is read as: every exported method of a service gets a % child line with a short detail list; private helpers are listed only for @GoToDefinition because the new % rule lives in them
-// 37. superseded, see 66
-// 38. the fs helpers in src/files.ts are shared by @LSP and @CLI but belong to no service in spec.human, so they are not listed as service methods
-// 39. spec.human no longer has the "import core.human" line; the earlier unresolved import is gone, so spec.bot carries no import
-// 40. the #vscode deployment section is no longer in spec.human, so it was removed from this file; it now lives in vscode.human and vscode.bot
-// 41. the layout list under #implementation still names the vscode/ files, since spec.human still says the implementation lives in those paths
-// 42. no code changed in this regen, so the [path][line] pointers were kept; lint checks that they still resolve
-// 43. the human wrote the alias as `as @<alias>` and the @ is required; `as be` without the @ is plain text, not an import
-// 44. "an alias is a qualifier that calls its service" is read as: a name of the imported spec is called as "@alias.name", e.g "@alias.api_service" calls `@api_service`
-// 45. the human did not say whether an aliased import also imports names unqualified; read as no, they are only reachable as "@alias.name"
-// 46. @<alias> is an @ definition made by the import line, not a header, so it is checked for unused-definition and duplicate-definition, and a bare @alias counts as a reference to it
-// 47. the plain import <file>.human stays as in the previous regen; spec.human line "import <file>.human imports every definition unqualified" confirms it
-// 48. an unknown alias, a missing name under an alias, and a duplicate alias use the existing undefined-reference and duplicate-definition rules, no new rule was added
-// 49. imports stay one level only, an aliased import does not make the imported spec's own imports available
-// 50. an alias is @ plus one word of letters, digits and underscore; `import a.human as @` with no word, a dotted alias or extra words is plain text
-// 51. @<alias> gets its own TextMate scope variable.other.alias.human after as and in "@alias.name"; the human said "different color", the editor theme still maps the scope to a color
-// 52. the cursor on the .name part of "@alias.name" goes to the name in the imported file, on the @alias part it goes to the import line; spec.human lists both lines without saying which part of the text each is for
-// 53. @AutoComplete lives in src/autocomplete.ts (completeAt) and is wired in src/lsp/server.ts (onCompletion, completionProvider); the pointers were set after coding
-// 54. autocomplete offers names only, no snippets or documentation, and the trigger characters are @ $ ? and .
-// 55. "do not call onlyhuman cli" is read as: no onlyhuman lint or def command is run while building, whether from src/cli.ts, dist/cli.js or npx; the linter and definition core are exercised through npm test only
-// 56. because of 55 this spec.bot was not linted with the onlyhuman cli, which the skill asks for before presenting; check it by hand or tell me to lint it
-// 57. as @<alias> is implemented as of this approve: tokenizer, definition, linter, grammar and autocomplete; a bare `as be` is plain text now; the vscode client bundle and the .vsix were not rebuilt
-// 58. a bare @alias that nothing defines is an undefined-reference like any other name; the alias itself is an @ definition made by the import line
-// 59. autocomplete only looks at the tokens before the cursor on its line, so the cursor in the middle of a typed name offers nothing; after @ it offers aliases then this spec's @ definitions, after @alias. only @ definitions of the imported spec
-// 60. "the prefix after the dot picks the kind, no prefix means @" is read as: "@alias.$Name" is `$Name`, "@alias.?Name" is `?Name`, "@alias.Name" is `@Name`; a # or an @ after the dot is plain text
-// 61. a $ or ? name reached through an alias gets the same checks as an @ name: an unknown name or alias is an undefined-reference, and the reference counts as a use of the alias
-// 62. "@alias.$Name" and "@alias.?Name" are implemented as of this approve in the symbol scan, linter, go-to-definition, autocomplete and grammar; the vscode client bundle and the .vsix were not rebuilt
-// 63. spec.bot was not linted with the onlyhuman cli, see 55; the "@alias.$Name" examples above are quoted so they are not read as references
-// 64. spec.human says version 0.8.0; it was applied to package.json, vscode/package.json and both package-lock.json files on approve, only the package's own version lines
-// 65. the .vsix for 0.8.0 is named onlyhuman-vscode-0.8.0.vsix and is built only when asked, it is not part of approve
-// 66. @Highlighter moved from spec.human to vscode.human and the line naming it was removed from #implementation, so spec.human no longer has an undefined reference; "work on *.bot as well as *.human" now covers @Linter and @GoToDefinition only
-// 67. the per-token colour list that was under @Highlighter in spec.human was dropped by the human; the grammar itself is unchanged and keeps its scopes, see vscode.bot
-// 68. unused-definition warnings for ?Data, @Parser, @LSP and @CLI are left as they are, spec.human is not changed by the robot
-// 69. onlyhuman-skill/SKILL.md was moved to onlyhuman/SKILL.md by the human and the two @Init lines in spec.human say so; applied on approve to src/skill.ts, src/cli.ts help, package.json files, tests and README
-// 70. no code changed in this regen, so the [path][line] pointers were kept; the pointers of the removed @Highlighter section moved to vscode.bot
-// 71. superseded, spec.human now says onlyhuman/SKILL.md
-// 72. the source inside the package and the target in the user project both use the folder onlyhuman/, as the two @Init lines say; the folder name matches the package name, so an existing onlyhuman/ folder in a user project is treated as the skill folder, and an existing SKILL.md there is not overwritten without --force
-// 73. the path rename is not migrated for users; an existing onlyhuman-skill/SKILL.md in a user project is left in place
-// 74. applied on approve: the source file is onlyhuman/SKILL.md in the repo; the old onlyhuman-skill/ entry shows as deleted in git and onlyhuman/ is untracked, nothing was staged or committed; dist/cli.js was rebuilt, the vscode bundle and .vsix were not; the [path][line] pointers were rechecked and the edits did not change any line numbers
-// 75. $PrefixVariable is new in spec.human: its first rule is "only one prefix variable per line", and $Token now lists $PrefixVariable in place of the separate $ @ ? lines; # was already a token line and stays in both
-// 76. "only one prefix variable per line" is not checked by @Linter today (a line like `$A @B` is accepted); add a rule if it should be an error, the human has not asked for one yet
-// 77. the per-prefix meanings under $PrefixVariable (entity, service, state, requirement, method) come from the skill's syntax definition, spec.human lists only the symbols
-// 78. % is now listed as a prefix token under $PrefixVariable, so the earlier note that % is not a prefix variable is dropped; in the code it stays a child-line token with kind percent and never a header, as the skill says
-// 79. "in *.bot, they must have a pointer" is read as every prefix variable header ($ @ ? #) and every % child line in a *.bot carries a [path][line] pointer; the linter only checks pointers that are present (broken-pointer), it has no missing-pointer rule, add one if wanted
-// 80. the existing *.bot files keep headers with no pointer where there is no implementing code, e.g. # version control points at package.json, but vscode.bot and some % lines may lack one; not audited in this regen
-// 81. the % line under $Token was removed from spec.human; its detail (attached to the name, no space, emitted in any file) moved under % in $PrefixVariable, and $Token reaches % through $PrefixVariable
-// 82. no code changed in this regen, so the [path][line] pointers were kept; the new $PrefixVariable header points at PREFIXES in src/types.ts
-// 83. "support postfix brackets" is read as: a (...) glued to the name is parameter detail, the name is the part before the (; the code does not do this yet, methodAt, robotMethod and pointerAt take the whole glued word as the name, so `%method(arg=A)` does not match `%method` and `%list(limit = 20)` splits into several words; run approve to implement stripping the brackets
-// 84. brackets with spaces such as `%list_job_executions(limit = 20)` tokenize as several words, the first one `list_job_executions(limit`; the spec says nothing about spaces, so unspaced brackets are recommended and the code will take the name up to the first (
-// 85. the "throw error if more than 1 $PrefixVariable is present in a line" line is gone from spec.human, so the multiple-prefix rule I proposed is not in this spec; "only one prefix variable per line" stays unchecked, see 76
-// 86. the end-of-file newline of spec.human changed (@Init line), no meaning change
-// 87. no code changed in this regen, so the [path][line] pointers were kept
-// 88. approved: postfix brackets are implemented in src/definition.ts through methodName; the % match ignores everything from the first ( on, in the .human and in the .bot; a test was added to tests/core.test.ts and the pointers of methodAt, headerKey, robotMethod and pointerAt moved by 6 lines
-// 89. approved: the linter was not changed, so broken-pointer still skips % lines (see the linter review) and one prefix variable per line is still not enforced
-// 90. spec.human names the section @Init; the previous spec.bot called it @Skill, so it is renamed to @Init here, in the layout line and in @CLI; the old notes that say @Skill refer to this section
-// 91. "@LSP // for running the lsp server" under @CLI is read as: the CLI gets an `onlyhuman lsp` command that starts the language server over stdio; the human did not name the command, `lsp` follows the existing lint, def and skill names
-// 92. decided on approve: the server is bundled into dist/cli.js with vscode-languageserver, so the CLI still has no runtime npm dependencies; build:cli got a createRequire banner because the ESM bundle cannot require node built-ins
-// 93. approved: `onlyhuman lsp` is implemented at the end of src/cli.ts, before the main call, because the server loads on import; it adds --stdio when the client did not pass it, and extra arguments print the usage and return 2
-// 94. verified: the bundled `node dist/cli.js lsp` answers initialize with the server capabilities and exits 0 after shutdown and exit
-// 95. the existing npm script "lsp" (node src/lsp/server.ts --stdio) stays for local development
-// 96. the %lsp pointer is the lsp branch in src/cli.ts, not %main, since it runs outside main; zed work is in zed.bot
-// 97. spec.human now says version 0.9.0 and lists zed/cargo.toml; the human named only Cargo.toml for zed, but zed/extension.toml also carries a version and Zed reads that one, so it is bumped with it, say so if it should stay at 0.8.0
-// 98. "zed/cargo.toml" in spec.human is read as zed/Cargo.toml, the file on disk; macOS is case-insensitive, other systems are not
-// 99. the version 0.9.0 is not applied yet, package.json, vscode/package.json and the zed files still say 0.8.0 until approve; the older notes that say 0.8.0 describe the earlier approve
-// 100. no code changed in this regen, so the [path][line] pointers were kept
-// 101. approved: 0.9.0 is applied to package.json, vscode/package.json, zed/Cargo.toml and zed/extension.toml, plus the package's own version lines in package-lock.json, vscode/package-lock.json and zed/Cargo.lock; the other 0.8.0 strings in the lockfiles are dependency and engine versions and were left; the .vsix is not rebuilt
-// 102. "version -> show version number" under @CLI is read as an `onlyhuman version` command; the human gave no flag, so `--version` and `-v` are accepted as aliases because that is what users type
-// 103. the number is read from the package's package.json at run time, not copied into the source, so a version bump needs no code edit; the bundle in dist/ reads the package.json next to it in the npm package
-// 104. version -> is read as a flow: the command `version` leads to showing the number; it is not a bare word of the spec, so lint does not treat it as a reference
-// 105. `onlyhuman version` is not implemented yet, so the %version pointer is the %main dispatch; updated on approve
-// 106. no other code changed in this regen, so the [path][line] pointers were kept
-// 107. answered on this regen: "more than one prefix variable on a line is an error // a -> + or == line is exempt" is the new multiple-prefix rule; it is not implemented yet, so it is added on approve; spec.human and the existing .bot files must lint clean under it, which the exemption is for
-// 108. the human chose flag only for the version: `onlyhuman --version` and `-v`, so the `version` command and note 102 are superseded; notes 103-105 still hold, the number is read from package.json
-// 109. the human chose to name the lsp command in the @LSP line: `onlyhuman lsp`, the same as note 91
-// 110. the typos explaination, parethnesis and sould were fixed in spec.human, so notes 29 and the `definations` mention are done; "definations" no longer appears
-// 111. still open: no missing-pointer rule, the human did not choose one; broken-pointer still skips % lines, see the linter review
-// 112. approved: --version and -v are implemented in src/cli.ts through version(), which reads ../package.json relative to the running file; `node dist/cli.js --version` prints 0.9.0, an extra argument prints the usage and returns 2
-// 113. approved: multiple-prefix is implemented as checkPrefixes in src/linter.ts [./src/linter.ts][133], error severity; it counts a $ @ ? # or % that is glued to a name, so bare prefixes, quoted text and comments do not count, a line with -> + or == is exempt, and the $ or ? after the dot of "@alias.$Name" belongs to the same variable
-// 114. to make the rule pass, nine prose lines of this spec.bot that named several symbols were reworded, e.g. "@LSP and @CLI share them" is now a comment; no meaning was dropped, and %onDidOpen and %onDidChangeContent are now two % lines; the line numbers in tests/import.test.ts: a fixture `- @Api @be.Api` was split over two lines
-// 115. tests: 38 pass, a new test in tests/core.test.ts covers the rule; the [path][line] pointers for src/cli.ts were updated after coding
-// 116. approved after the human moved the skill: the library source is skills/onlyhuman/SKILL.md (spec.human lines 3 and 113), and the target in a user project is now skills/onlyhuman/SKILL.md too (spec.human line 116, chosen on the question), so the skill folder mirrors the plugin layout; notes 12, 13, 16 and 69-74 describe the earlier onlyhuman/SKILL.md path
-// 117. .claude-plugin/plugin.json is not named in spec.human, it is listed in the layout because the human added it; its version should match # version control, it says 0.9.0 now; the human has not asked for it in the version list
-// 118. package.json files now lists skills and .claude-plugin instead of onlyhuman/SKILL.md, so both ship in the npm package; the vscode client does not use them
-// 119. an existing <dir>/onlyhuman/SKILL.md written by an earlier version is left in place and not migrated; init now writes <dir>/skills/onlyhuman/SKILL.md next to it, so a project can hold both
-// 120. applied: src/skill.ts, src/cli.ts usage, tests/skill.test.ts, doc/DETAILS.md and skills/onlyhuman/SKILL.md line 71 use the new paths; 38 tests pass and a manual skill init wrote the new target
+// 1. @GoToDefinition and @Linter list their public method or grammar-rule signatures with brief explanations; every exported method of a service gets a % child line, and private helpers are listed only under @GoToDefinition because the % child rule lives in them
+// 2. development uses Node >= 22.18; the bundled server targets the Node runtime shipped with VS Code, and the CLI bundle targets node20
+// 3. in a *.bot, go-to-definition on a header or % line goes to its code pointer, not back to the .human header; the .human definition remains the source of intent
+// 4. npm.sh uses a project-local .npm-cache so the publish flow does not depend on the state of the global npm cache
+// 5. the CLI bundle uses esbuild and targets Node 20 even though development uses Node 22.18; the source-TypeScript alternative keeps Node >=22.18
+// 6. package name availability is not checked until publish; the current name is onlyhuman and the scoped fallback is "@benjit87/onlyhuman"
+// 7. the npm package exports only the CLI; the parser API remains internal until the human asks for it
+// 8. @Init is exposed as `onlyhuman skill init` and refuses to overwrite an existing target unless --force is passed
+// 9. "fixed in the library" is read as a file shipped in the npm package and located relative to the running code, not a copy embedded in source
+// 10. consecutive-header applies only to prefix headers (@ ? $ #); comment headers are not counted, and a final header with no child is not flagged unless a separate empty-header rule is added
+// 11. the example '(?Parser)' is read as a state name; ?Parser is undefined in this spec, so the example covers recognition inside parentheses, not a successful lookup
+// 12. only parentheses are treated as ignored punctuation; other punctuation such as commas remains a separate word
+// 13. "*.human" in the import line is read as a placeholder for a spec file name such as backend.human, resolved under spec/, not a glob; "import all" means every $ @ ? # header of that file
+// 14. "starts in a new line" is read as: import is the first word of its own line, one file per line; it may be bare (no prefix, exempt from no-prefix) or a child line after a bullet
+// 15. "relevant definitions" is read as all definitions of the imported spec; unused-definition is not applied to imported names
+// 16. the human did not say what happens when the file is missing, so unresolved-import is added as an error, only when file info is passed
+// 17. imports are one level only, also for an aliased import, so no cycle rule is needed; transitive imports and cycle detection are left out
+// 18. a local definition with the same name as an imported one wins and is not reported as a duplicate
+// 19. go-to-definition on a reference to an imported name jumps to the imported file; the human only wrote "import file.human, goes to the target file", so this is an extension
+// 20. a % child line in a *.human is matched to a % child of the same name under the same parent header in the *.bot, not globally, since one name can appear under several headers
+// 21. when the *.bot has no matching % child or header, go-to-definition stays on the .human line
+// 22. % stays a child-line token only, never a header, so the linter and PREFIXES are unchanged
+// 23. the fs helpers in src/files.ts are shared by @LSP and @CLI but belong to no service in spec.human, so they are not listed as service methods
+// 24. the vscode deployment section and @Highlighter live in vscode.human and vscode.bot, not here; the layout list under #implementation still names the vscode/ files, since spec.human still says the implementation lives in those paths; "work on *.bot as well as *.human" covers @Linter and @GoToDefinition only
+// 25. the human wrote the alias as `as @<alias>` and the @ is required; `as be` without the @ is plain text, not an import
+// 26. "an alias is a qualifier that calls its service" is read as: a name of the imported spec is called as "@alias.name", e.g "@alias.api_service" calls `@api_service`
+// 27. an aliased import does not also import names unqualified; they are only reachable as "@alias.name"
+// 28. @<alias> is an @ definition made by the import line, not a header, so it is checked for unused-definition and duplicate-definition, and a bare @alias counts as a reference to it; a bare @alias that nothing defines is an undefined-reference
+// 29. an unknown alias, a missing name under an alias, and a duplicate alias use the existing undefined-reference and duplicate-definition rules, no new rule was added
+// 30. an alias is @ plus one word of letters, digits and underscore; `import a.human as @` with no word, a dotted alias or extra words is plain text
+// 31. @<alias> gets its own TextMate scope variable.other.alias.human after as and in "@alias.name"; the human said "different color", the editor theme still maps the scope to a color
+// 32. the cursor on the .name part of "@alias.name" goes to the name in the imported file, on the @alias part it goes to the import line; spec.human lists both lines without saying which part of the text each is for
+// 33. "the prefix after the dot picks the kind, no prefix means @" is read as: "@alias.$Name" is `$Name`, "@alias.?Name" is `?Name`, "@alias.Name" is `@Name`; a # or an @ after the dot is plain text; a $ or ? name reached through an alias gets the same checks as an @ name and counts as a use of the alias
+// 34. @AutoComplete lives in src/autocomplete.ts (completeAt) and is wired in src/lsp/server.ts (onCompletion, completionProvider); it offers names only, no snippets or documentation, with the trigger characters @ $ ? and .
+// 35. autocomplete only looks at the tokens before the cursor on its line, so the cursor in the middle of a typed name offers nothing
+// 36. "do not call onlyhuman cli" is read as: no onlyhuman lint or def command is run while building, whether from src/cli.ts, dist/cli.js or npx; the linter and definition core are exercised through npm test only, so spec.bot is not linted with the cli by the robot, check it by hand or ask for a lint
+// 37. unused-definition warnings for ?Data, @Parser and @CLI are left as they are, spec.human is not changed by the robot
+// 38. the per-prefix meanings under $PrefixVariable (entity, service, state, requirement, method) come from the skill's syntax definition, spec.human lists only the symbols
+// 39. % is listed as a prefix token under $PrefixVariable; in the code it stays a child-line token with kind percent and never a header, as the skill says
+// 40. "in *.bot, they must have a pointer" is read as every prefix variable header ($ @ ? #) and every % child line in a *.bot carries a [path][line] pointer; the linter only checks pointers that are present, and broken-pointer skips % lines; there is no missing-pointer rule, the human did not choose one; some existing headers have no pointer, not audited
+// 41. "only one prefix variable per line" is not checked by @Linter: the multiple-prefix rule was added and then removed together with its line in spec.human, and its code and test are deleted; add the line back to spec.human to bring the rule back
+// 42. "support postfix brackets" is read as: a (...) glued to the name is parameter detail, the name is the part before the first (; implemented in src/definition.ts through methodName, for the .human and the .bot; brackets with spaces such as `%list(limit = 20)` tokenize as several words, so unspaced brackets are recommended
+// 43. spec.human names the section @Init; an earlier spec.bot called it @Skill, so it is renamed to @Init here, in the layout line and in @CLI
+// 44. "@LSP // for running the lsp server" under @CLI is read as an `onlyhuman lsp` command that starts the language server over stdio; it follows the existing lint, def and skill names
+// 45. the server is bundled into dist/cli.js with vscode-languageserver, so the CLI still has no runtime npm dependencies; build:cli has a createRequire banner because the ESM bundle cannot require node built-ins
+// 46. `onlyhuman lsp` is implemented at the end of src/cli.ts, before the main call, because the server loads on import; it adds --stdio when the client did not pass it, and extra arguments print the usage and return 2
+// 47. the existing npm script "lsp" (node src/lsp/server.ts --stdio) stays for local development
+// 48. the %lsp pointer is the lsp branch in src/cli.ts, not %main, since it runs outside main; zed work is in zed.bot
+// 49. spec.human says version 0.10.0 and lists zed/cargo.toml, read as zed/Cargo.toml, the file on disk (macOS is case-insensitive, other systems are not); zed/extension.toml also carries a version and Zed reads that one, so it is bumped with it, say so if it should stay behind
+// 50. approved: 0.10.0 is applied to package.json, vscode/package.json, zed/Cargo.toml, zed/extension.toml and .claude-plugin/plugin.json, plus the package's own version lines in package-lock.json, vscode/package-lock.json and zed/Cargo.lock; other version strings in the lockfiles are dependencies and were left; dist/ and the .vsix were not rebuilt, so `node dist/cli.js --version` still prints 0.9.0 until `npm run build:cli`; vscode.bot and zed.bot still say 0.9.0 until they are regenerated
+// 51. "version -> show version number" is read as a flow to the flags `onlyhuman --version` and `-v`, there is no `version` command; the number is read from the package's package.json at run time, so a bump needs no code edit; an extra argument prints the usage and returns 2
+// 52. the skill path is skills/onlyhuman/SKILL.md both in the library and in a user project, mirroring the plugin layout; an older <dir>/onlyhuman/SKILL.md is left in place and not migrated, so a project can hold both
+// 53. package.json files lists skills and .claude-plugin so both ship in the npm package; .claude-plugin/plugin.json is not named in spec.human, it is listed in the layout because the human added it, its version should match # version control, and the vscode client does not use them

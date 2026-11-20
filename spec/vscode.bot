@@ -7,7 +7,7 @@ import spec.human as @spec
 - all implementation is under the vscode folder, the grammars are @Highlighter; the server source stays in src/lsp/server.ts and is bundled in, see spec.bot
 - package as a .vsix, installed with code --install-extension
   - build: cd vscode, npm run build, then npx vsce package
-  - output: onlyhuman-vscode-<version>.vsix, version is 0.9.0 and is bumped per release
+  - output: onlyhuman-vscode-<version>.vsix, version is 0.10.0 and is bumped per release
   - install: code --install-extension onlyhuman-vscode-<version>.vsix
 - bundle the server and client with esbuild into vscode/dist
   - vscode/dist/server.js // from src/lsp/server.ts, with vscode-languageserver bundled in
@@ -75,7 +75,7 @@ import spec.human as @spec
 // assumptions, open points in vscode.human, change vscode.human if wrong
 // 1. "published to the marketplace" is a release requirement; the robot prepares and verifies the .vsix and asks before publishing, because publishing is a public, human-authorized step
 // 2. "all implementation will be under vscode folder" is read as: the client, grammars, bundle output and scripts live under vscode/, while the shared server source stays in src/lsp/server.ts and is bundled into vscode/dist, so it is not duplicated
-// 4. the vsix version is 0.9.0 from # version control in spec.human, vscode.human does not state a version
+// 4. the vsix version is 0.10.0 from # version control in spec.human, vscode.human does not state a version
 // 5. the pointers were carried over and not re-checked against code, since no code changed in this regen
 // 7. the cli was run on this file after the regen
 // 8. vscode.human now imports spec.human as @spec, so "@spec.$Token" under @Highlighter is a qualified reference to $Token in spec.human; the import is used, so the alias is not an unused-definition
@@ -84,3 +84,4 @@ import spec.human as @spec
 // 11. neither human file now says @Highlighter works on *.bot; the *.bot grammar and its language id are kept from the previous generation as an implementation detail; say so if it should go
 // 12. the "locall" typo in vscode.human is fixed, no assumption needed
 // 13. no code changed in this regen, so the [path][line] pointers were kept
+// 14. regen after the version in spec.human went to 0.10.0; vscode.human and zed.human did not change, the version mentions are updated and the [path][line] pointers were kept; 0.10.0 is already applied to vscode/package.json, zed/Cargo.toml and zed/extension.toml; the .vsix is not rebuilt
