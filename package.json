@@ -1,6 +1,6 @@
 {
   "name": "onlyhuman",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "description": "A descriptive language for writing specs in plain bullets, with a CLI linter and go-to-definition.",
   "license": "MIT",
   "type": "module",
@@ -54,5 +54,8 @@
     "typescript": "^5.7.0",
     "vscode-languageserver": "^9.0.1",
     "vscode-languageserver-textdocument": "^1.0.12"
+  },
+  "dependencies": {
+    "onlyhuman": "^0.9.0"
   }
 }

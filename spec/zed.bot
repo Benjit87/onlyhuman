@@ -4,7 +4,7 @@
 #instructions [./zed/extension.toml][1]
 - all work is done in the zed folder at the repository root, nothing outside it changes
 - create the .toml files a Zed extension needs
-  - %extension.toml [./zed/extension.toml][1] // the manifest, id onlyhuman, name onlyhuman, version 0.9.0 to match the package, schema_version 1, and authors, description, repository
+  - %extension.toml [./zed/extension.toml][1] // the manifest, id onlyhuman, name onlyhuman, version 0.10.0 to match the package, schema_version 1, and authors, description, repository
     - registers one language server, onlyhuman, for the languages onlyhuman and onlyhuman-robot
   - %languages/onlyhuman/config.toml [./zed/languages/onlyhuman/config.toml][1] // language onlyhuman for *.human, path_suffixes human, line_comments "// "
   - %languages/onlyhuman-robot/config.toml [./zed/languages/onlyhuman-robot/config.toml][1] // language onlyhuman-robot for *.bot, path_suffixes bot, same comment marker
@@ -28,7 +28,7 @@
 // assumptions, open points in zed.human, change zed.human if wrong
 // 1. "create the necessary .toml extension file for zed" is read as the files above; a language server cannot be started from .toml alone, Zed needs the Rust crate (Cargo.toml and src/lib.rs) that implements language_server_command, so those two files are included
 // 2. the command `onlyhuman lsp` is the one proposed in spec.human under the CLI, it is not implemented yet; until it is, the extension would have to start `node` on src/lsp/server.ts with --stdio, which only works inside this repository
-// 3. the id onlyhuman, the language names onlyhuman and onlyhuman-robot, and the version 0.9.0 are my choices, zed.human gives none; the names follow the vscode language ids
+// 3. the id onlyhuman, the language names onlyhuman and onlyhuman-robot, and the version 0.10.0 are my choices, zed.human gives none; the names follow the vscode language ids
 // 4. *.human and *.bot are two Zed languages, as in vscode, so each can get its own settings later
 // 5. no tree-sitter grammar is made, Zed highlights through tree-sitter, so no colours without one; the human did not ask for it
 // 6. the zed/ folder does not exist yet, so the [path][line] pointers are targets and lint reports them as broken-pointer warnings until approve creates the files
@@ -38,3 +38,4 @@
 // 10. extension.toml keys, the config.toml keys and zed_extension_api 0.7.0 come from my knowledge of Zed, check them in Zed when installing the dev extension
 // 11. the extension runs `onlyhuman` from the PATH (worktree.which), the user installs it with npm i -g onlyhuman; the lsp command exists as of this approve but is not yet published to npm
 // 12. [path][line] pointers were updated after coding, %language_server_command is at zed/src/lib.rs line 11
+// 13. regen after the version in spec.human went to 0.10.0; vscode.human and zed.human did not change, the version mentions are updated and the [path][line] pointers were kept; 0.10.0 is already applied to vscode/package.json, zed/Cargo.toml and zed/extension.toml; the .vsix is not rebuilt
